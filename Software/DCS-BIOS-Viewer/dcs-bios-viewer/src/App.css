@@ -1,0 +1,25 @@
+#connect-input-form {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+
+#connect-input-form div {
+    width: 90%;
+}
+
+#connect-input-form label {
+    width: 120px;
+    display: inline-block;
+}
+
+#submit-connect-input-form {
+    max-width: 150px;
+}
+
+.input-holder input {
+    min-width: 50%;
+    display: inline-block;
+}

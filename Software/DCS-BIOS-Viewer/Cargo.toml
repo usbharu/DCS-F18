@@ -1,0 +1,15 @@
+[package]
+name = "DCS-BIOS-Viewer-ROOT"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dcs-bios.workspace = true
+getopts = "0.2.21"
+
+
+[workspace]
+members = ["dcs-bios", "dcs-bios-const-generator","dcs-bios-viewer/src-tauri"]
+
+[workspace.dependencies]
+dcs-bios = { path = "dcs-bios",version="0.1.0"}
