@@ -1,5 +1,3 @@
-mod source;
-
 use std::net::{Ipv4Addr, UdpSocket};
 
 pub fn setup_udp() -> Result<UdpSocket, std::io::Error> {

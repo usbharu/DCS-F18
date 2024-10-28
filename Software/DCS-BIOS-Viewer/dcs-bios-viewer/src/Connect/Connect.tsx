@@ -5,7 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 export const Connect = () => {
 
     const [bind, setBind] = useState("0.0.0.0:5010")
-    const [address, setAddress] = useState("255.239.50.10")
+    const [address, setAddress] = useState("239.255.50.10")
     const [interfaceAddr, setInterfaceAddr] = useState("0.0.0.0")
 
     const history = useNavigate();

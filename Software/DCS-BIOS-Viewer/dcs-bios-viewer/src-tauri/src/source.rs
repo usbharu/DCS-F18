@@ -23,7 +23,7 @@ impl Source for UdpSource {
 }
 
 impl UdpSource {
-    fn from_addr(bind: &str, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> Result<UdpSource, Error> {
+    pub fn from_addr(bind: &str, multiaddr: &Ipv4Addr, interface: &Ipv4Addr) -> Result<UdpSource, Error> {
         let udp_socket = UdpSocket::bind(bind)?;
         udp_socket.set_broadcast(true)?;
         udp_socket.set_read_timeout(Some(std::time::Duration::from_secs(1)))?;
@@ -34,7 +34,7 @@ impl UdpSource {
         })
     }
 
-    fn from_socket(udp_socket: UdpSocket) -> Result<UdpSource, Error> {
+    pub fn from_socket(udp_socket: UdpSocket) -> Result<UdpSource, Error> {
         Ok(UdpSource {
             udp_socket,
             buf: [0; 1500],

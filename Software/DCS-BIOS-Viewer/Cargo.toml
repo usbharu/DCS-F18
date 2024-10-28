@@ -9,7 +9,8 @@ getopts = "0.2.21"
 
 
 [workspace]
-members = ["dcs-bios", "dcs-bios-const-generator","dcs-bios-viewer/src-tauri"]
+members = ["dcs-bios", "dcs-bios-const-generator", "dcs-bios-viewer/src-tauri"]
 
 [workspace.dependencies]
-dcs-bios = { path = "dcs-bios",version="0.1.0"}
+dcs-bios = { path = "dcs-bios", version = "0.1.0" }
+dcs-bios-const-generator = { path = "dcs-bios-const-generator", version = "1.0.0" }
