@@ -3,7 +3,7 @@ use std::net::{Ipv4Addr, UdpSocket};
 
 pub trait Source {
     fn setup(&self) -> Result<(), Error>;
-    fn read(&self) -> Result<Vec<u8>, Error>;
+    fn read(&mut self) -> Result<Vec<u8>, Error>;
 }
 
 pub struct UdpSource {
@@ -16,15 +16,9 @@ impl Source for UdpSource {
         Ok(())
     }
 
-    fn read(&self) -> Result<Vec<u8>, Error> {
-        match &self.udp_socket.recv_from(&mut &self.buf) {
-            Ok((size, addr)) => {
-                Ok(&self.buf[..size].to_vec())
-            }
-            Err(e) => {
-                Err(e)
-            }
-        }
+    fn read(&mut self) -> Result<Vec<u8>, Error> {
+        let a = 0..(self.udp_socket.recv_from(&mut self.buf)?.0);
+        Ok(self.buf[a].to_vec())
     }
 }
 
