@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
-use std::{sync::{Arc, Mutex}, thread, time::Duration};
+use std::{sync::{Arc, Mutex}, time::Duration};
 use tauri::{Emitter, Manager, State};
+use tokio::time;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -37,9 +38,8 @@ fn setup_socket(
                     
                     app_handle.emit("source",a).unwrap();
                 }
-                
-                
-                thread::sleep(Duration::from_secs(1));
+
+                time::sleep(Duration::from_secs(1)).await;
             }
             
         }
