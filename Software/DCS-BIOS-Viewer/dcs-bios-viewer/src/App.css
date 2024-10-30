@@ -24,8 +24,15 @@
     display: inline-block;
 }
 
-.metrics-id {
+.metrics-description {
+    margin-top: 4px;
+    margin-bottom: 4px;
+    margin-right: 16px;
     display: inline;
+}
+
+.metrics-holder {
+    display: inline-table;
 }
 
 .metrics-remove-button {

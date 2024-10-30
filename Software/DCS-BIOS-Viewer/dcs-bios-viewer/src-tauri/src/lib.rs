@@ -4,10 +4,11 @@ mod source;
 use crate::data::Data;
 use crate::source::{Source, UdpSource};
 use dcs_bios::parse_packet;
-use dcs_bios_const_generator::{parse_file, Function};
+use dcs_bios_const_generator::{parse_file, Function, Output};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
+use std::io::Error;
 use std::net::Ipv4Addr;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -42,14 +43,15 @@ fn setup_socket(
         bind,
         &Ipv4Addr::from_str(addr).map_err(|_| "Addressが不正です".to_string())?,
         &Ipv4Addr::from_str(interface).map_err(|_| "Interfaceが不正です".to_string())?,
-    ).map_err(|e| e.to_string())?;
+    )
+    .map_err(|e| e.to_string())?;
     tauri::async_runtime::spawn({
         let source = source.addr.clone();
         let listening = listening.ids.clone();
         async move {
             let mut counter: u16 = 0;
             udp_source.setup().unwrap();
-            let mut list: Vec<u16> = vec![];
+            let mut list: HashMap<u16, Output> = HashMap::new();
             loop {
                 if counter % 1000 == 0 {
                     let a = source.lock().unwrap();
@@ -59,9 +61,13 @@ fn setup_socket(
                         .lock()
                         .unwrap()
                         .iter()
-                        .flat_map(|x| x.outputs.iter().map(|f| f.address).collect::<Vec<u16>>())
-                        .collect::<Vec<u16>>();
-
+                        .flat_map(|x| {
+                            x.outputs
+                                .iter()
+                                .map(|f| (f.address, f.clone()))
+                                .collect::<HashMap<u16, Output>>()
+                        })
+                        .collect::<HashMap<u16, Output>>();
                     if source_c != *a {
                         println!("break!");
                         break;
@@ -80,13 +86,15 @@ fn setup_socket(
                                         if x.address == 0 {
                                             return None;
                                         }
-                                        if !list.contains(&x.address) {
+                                        if !list.contains_key(&x.address) {
                                             return None;
                                         }
 
+                                        
+
                                         Some(Data {
                                             address: x.address,
-                                            value: (u16::from_le_bytes(x.data) & 65535) >> 0,
+                                            value: u16::from_le_bytes(x.data)
                                         })
                                     })
                                     .collect::<Vec<Data>>();
@@ -96,6 +104,7 @@ fn setup_socket(
 
                                 map.sort_by_key(|f| f.address);
                                 map.dedup_by_key(|f| f.address);
+                                println!("{:?}", map);
                                 app_handle.emit("data", map).unwrap();
                             }
                         };
@@ -111,43 +120,51 @@ fn setup_socket(
 }
 
 #[tauri::command]
-fn modules(modules: State<'_, Modules>) -> Vec<String> {
-    modules.modules.iter().map(|v| v.name.clone()).collect()
+fn modules(modules: State<'_, Modules2>) -> Result<Vec<String>, String> {
+    let modules = modules.modules.lock().map_err(|e| e.to_string())?;
+    Ok(modules.keys().map(|p| p.clone()).collect::<Vec<String>>())
 }
 
-#[tauri::command]
-fn categories(modules: State<'_, Modules>, module_name: &str) -> Result< Vec<String>,String> {
-    let path = &modules
-        .modules
-        .iter()
-        .find(|v| v.name == module_name)
-        .unwrap()
-        .path;
-    let file = File::open(path).map_err(|e| e.to_string())?;
-    let result: HashMap<String, HashMap<String, Function>> = match serde_json::from_reader(file) {
-        Ok(v) => v,
-        Err(_) => {
-            return Ok(vec![]);
-        }
-    };
-    Ok(result.iter().map(|v| v.0.clone()).collect())
+#[tauri::command(async)]
+async fn categories(
+    modules: State<'_, Modules2>,
+    module_name: &str,
+) -> Result<Vec<String>, String> {
+    let mut modules = modules.modules.lock().map_err(|e| e.to_string())?;
+    let module = modules
+        .iter_mut()
+        .find(|p| p.0 == module_name)
+        .ok_or("".to_string())?
+        .1;
+    if module.is_none() {
+        let _ = module.get_func();
+    }
+    Ok(module.categories.clone().unwrap())
 }
 
-#[tauri::command]
-fn ids(modules: State<'_, Modules>, module_name: &str, category_name: &str) -> Vec<String> {
-    let path = &modules
-        .modules
-        .iter()
-        .find(|v| v.name == module_name)
-        .unwrap()
-        .path;
-    let file = File::open(path).unwrap();
-    parse_file(file)
-        .unwrap()
-        .iter()
-        .filter(|p| p.category == category_name)
-        .map(|v| v.identifier.clone())
-        .collect()
+#[tauri::command(async)]
+async fn ids(
+    modules: State<'_, Modules2>,
+    module_name: &str,
+    category_name: &str,
+) -> Result<Vec<String>, String> {
+    let mut modules = modules.modules.lock().map_err(|e| e.to_string())?;
+    let module = modules
+        .iter_mut()
+        .find(|p| p.0 == module_name)
+        .ok_or("".to_string())?
+        .1;
+    if module.is_none() {
+        let _ = module.get_func();
+    }
+    Ok(match &module.func {
+        Some(v) => v
+            .iter()
+            .filter(|p| p.1.category == category_name)
+            .map(|o| o.0.clone())
+            .collect(),
+        None => return Err("".to_string()),
+    })
 }
 
 #[tauri::command]
@@ -159,39 +176,41 @@ fn unsubscribe(listening: State<'_, Listening>, id: &str) -> () {
     };
 }
 
-#[tauri::command]
-fn subscribe(
+#[tauri::command(async)]
+async fn subscribe(
     listening: State<'_, Listening>,
-    modules: State<'_, Modules>,
+    modules: State<'_, Modules2>,
     module_name: &str,
     id: &str,
-) -> () {
+) -> Result<(), String> {
     let mut guard = listening.ids.lock().unwrap();
-    let string = String::from(id);
-    if guard.iter().find(|&c| *c.identifier == string).is_none() {
-        let path = &modules
-            .modules
-            .iter()
-            .find(|v| v.name == module_name)
-            .unwrap()
-            .path;
-        let file = File::open(path).unwrap();
-        match match parse_file(file) {
-            Ok(v) => v,
-            Err(_) => {
-                return;
-            }
+    if guard.iter().find(|p| p.identifier == id).is_some() {
+        return Ok(());
+    };
+    let mut modules = modules.modules.lock().map_err(|e| e.to_string())?;
+    let module = modules
+        .iter_mut()
+        .find(|p| p.0 == module_name)
+        .ok_or("".to_string())?
+        .1;
+    if module.is_none() {
+        let _ = module.get_func();
+    };
+
+    match &module.func {
+        Some(v) => {
+            let func = v
+                .iter()
+                .find(|p| p.0 == id)
+                .ok_or("".to_string())?
+                .1
+                .clone();
+            guard.push(func);
         }
-        .iter()
-        .find(|p| p.identifier == id)
-        {
-            Some(v) => {
-                guard.push(v.clone());
-                println!("subscribed {:?}", v);
-            }
-            None => {}
-        }
-    }
+
+        None => {}
+    };
+    Ok(())
 }
 
 #[tauri::command]
@@ -210,9 +229,59 @@ pub struct Listening {
     pub ids: Arc<Mutex<Vec<Function>>>,
 }
 
+#[derive(Deserialize, Serialize, Debug)]
 pub struct Modules {
     pub modules: Vec<ModulePath>,
 }
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct Module2 {
+    pub path: PathBuf,
+    pub name: String,
+    func: Option<HashMap<String, Function>>,
+    categories: Option<Vec<String>>,
+}
+
+impl Module2 {
+    fn set_func(&mut self, map: HashMap<String, Function>) {
+        self.func = Some(map);
+        let categories = self
+            .func
+            .as_ref()
+            .unwrap()
+            .values()
+            .map(|p| p.category.clone())
+            .collect::<HashSet<String>>()
+            .into_iter()
+            .collect();
+        self.categories = Some(categories);
+    }
+
+    pub fn is_none(&self) -> bool {
+        self.func.is_none() || self.categories.is_none()
+    }
+
+    pub fn get_func(&mut self) -> Result<HashMap<String, Function>, Error> {
+        let _ = &if self.func.is_some() {
+            return Ok(self.func.clone().unwrap());
+        };
+        let file = File::open(&self.path)?;
+        let func2 = parse_file(file)?;
+        self.set_func(
+            func2
+                .into_iter()
+                .map(|p| (p.identifier.clone(), p))
+                .collect::<HashMap<_, _>>(),
+        );
+        Ok(self.func.clone().unwrap())
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct Modules2 {
+    pub modules: Arc<Mutex<HashMap<String, Module2>>>,
+}
+
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct ModulePath {
     pub name: String,
@@ -244,24 +313,53 @@ pub fn run() {
                 .collect();
                 println!("JSON Path: {:?}", dcs_path);
                 let dir = dcs_path.read_dir().unwrap();
+                {
+                    let map = dir
+                        .map(|x| {
+                            let path = x.unwrap().path();
+                            ModulePath {
+                                name: path
+                                    .file_name()
+                                    .unwrap()
+                                    .to_os_string()
+                                    .into_string()
+                                    .unwrap(),
+                                path: path,
+                            }
+                        })
+                        .collect();
+                    app.manage(Modules { modules: map });
+                };
+                let dir = dcs_path.read_dir().unwrap();
                 let map = dir
                     .map(|x| {
                         let path = x.unwrap().path();
-                        ModulePath {
-                            name: path
-                                .file_name()
-                                .unwrap()
-                                .to_os_string()
-                                .into_string()
-                                .unwrap(),
-                            path: path,
-                        }
+                        let name = path
+                            .file_name()
+                            .unwrap()
+                            .to_os_string()
+                            .into_string()
+                            .unwrap();
+                        (
+                            name.clone(),
+                            Module2 {
+                                name: name,
+                                path: path,
+                                categories: None,
+                                func: None,
+                            },
+                        )
                     })
-                    .collect();
-                app.manage(Modules { modules: map });
+                    .collect::<HashMap<String, Module2>>();
+                app.manage(Modules2 {
+                    modules: Arc::new(Mutex::new(map)),
+                });
             } else {
                 eprintln!("USERPROFILE environment variable not found.");
                 app.manage(Modules { modules: vec![] });
+                app.manage(Modules2 {
+                    modules: Arc::new(Mutex::new(HashMap::new())),
+                });
             }
             Ok(())
         })

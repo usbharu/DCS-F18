@@ -19,6 +19,7 @@ pub struct Output {
     pub shift_by: Option<u16>,
     pub suffix: String,
     pub r#type: Type,
+    pub max_length: Option<u16>
 }
 #[allow(non_camel_case_types)]
 #[derive(Serialize, Deserialize, Debug, Clone)]

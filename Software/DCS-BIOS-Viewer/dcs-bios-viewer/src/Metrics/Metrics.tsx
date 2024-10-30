@@ -1,6 +1,5 @@
 import { invoke } from "@tauri-apps/api/core"
-import { listen } from "@tauri-apps/api/event"
-import { useEffect, useState } from "react"
+import { Metric } from "./Metric"
 
 export type Output = {
     address: number,
@@ -24,42 +23,12 @@ export type Function = {
 
 export type Data = {
     address: number,
-    value: number
+    value: number | string
 }
 
 export type OnRemove = (id: string) => void;
 
 export const Metrics: React.FC<{ fun: Function, OnRemove: OnRemove }> = ({ fun, OnRemove }) => {
-
-    const [data, setData] = useState<Data[]>([])
-    const addressList = fun.outputs.map((o) => o.address);
-
-    useEffect(() => {
-        console.log(data);
-
-    }, [data])
-
-
-    useEffect(() => {
-        let unlisten = listen("data", (d) => {
-            console.log(d);
-            let dat = d.payload as Data[]
-            let b: Data[] = dat.filter((p) => addressList.includes(p.address));
-            if (b.length != 0) {
-                setData(b)
-            }
-        })
-
-        return () => {
-            unlisten.then((result) => {
-                result();
-            }).catch((err) => {
-                console.error(err);
-
-            });
-        }
-    }, [fun])
-
     function remove(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
         e.preventDefault();
         invoke("unsubscribe", { id: fun.identifier }).then(() => {
@@ -70,14 +39,22 @@ export const Metrics: React.FC<{ fun: Function, OnRemove: OnRemove }> = ({ fun, 
 
     return (
         <div className="metrics">
-             <button className="metrics-remove-button" onClick={(e) => remove(e)}>x</button>
-            <p className="metrics-id">{fun.identifier}</p>
-            {
-                data.sort((a, b) => a.address - b.address).map((v) => (
-                    <p key={v.address}>{v.address} + {v.value}</p>
-                )
-                )
-            }
+            <button className="metrics-remove-button" onClick={(e) => remove(e)}>x</button>
+            <div className="metrics-holder">
+                <div>
+                <h4 className="metrics-description">{fun.description}</h4>
+                <span className="metrics-id">{fun.category}/{fun.identifier}</span>
+                </div>
+            
+            
+                {
+                    fun.outputs.sort((a, b) => a.address - b.address).map((v) => (
+                        <Metric key={v.address} output={v} />
+                    )
+                    )
+                }
+            </div>
+
 
         </div>
     )
