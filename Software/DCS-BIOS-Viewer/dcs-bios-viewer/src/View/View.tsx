@@ -103,7 +103,7 @@ export const View = () => {
             </form>
             {
                 views.map(value => (
-                    <Metrics key={value.identifier} fun={value}></Metrics>
+                    <Metrics key={value.identifier} fun={value} OnRemove={(v)=>fetchSubscribed()}></Metrics>
                 ))
             }
         </div>

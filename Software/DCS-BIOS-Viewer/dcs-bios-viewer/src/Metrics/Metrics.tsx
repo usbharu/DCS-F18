@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core"
 import { listen } from "@tauri-apps/api/event"
 import { useEffect, useState } from "react"
 
@@ -26,7 +27,9 @@ export type Data = {
     value: number
 }
 
-export const Metrics: React.FC<{ fun: Function }> = ({ fun }) => {
+export type OnRemove = (id: string) => void;
+
+export const Metrics: React.FC<{ fun: Function, OnRemove: OnRemove }> = ({ fun, OnRemove }) => {
 
     const [data, setData] = useState<Data[]>([])
     const addressList = fun.outputs.map((o) => o.address);
@@ -41,7 +44,7 @@ export const Metrics: React.FC<{ fun: Function }> = ({ fun }) => {
         let unlisten = listen("data", (d) => {
             console.log(d);
             let dat = d.payload as Data[]
-            let b:Data[] = dat.filter((p) => addressList.includes(p.address));
+            let b: Data[] = dat.filter((p) => addressList.includes(p.address));
             if (b.length != 0) {
                 setData(b)
             }
@@ -57,6 +60,13 @@ export const Metrics: React.FC<{ fun: Function }> = ({ fun }) => {
         }
     }, [fun])
 
+    function remove(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
+        e.preventDefault();
+        invoke("unsubscribe",{id:fun.identifier}).then(() => {
+            OnRemove(fun.identifier)
+        }).catch((e)=>console.error(e)
+        );
+    }
 
     return (
         <div>
@@ -67,6 +77,7 @@ export const Metrics: React.FC<{ fun: Function }> = ({ fun }) => {
                 )
                 )
             }
+            <button onClick={(e) => remove(e)}>Remove</button>
         </div>
     )
 }

@@ -13,7 +13,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use std::{env, vec};
+use std::{env, iter, vec};
 use tauri::{Emitter, Manager, State};
 use tokio::time;
 
@@ -152,6 +152,15 @@ fn ids(modules: State<'_, Modules>, module_name: &str, category_name: &str) -> V
 }
 
 #[tauri::command]
+fn unsubscribe(listening: State<'_, Listening>, id: &str) -> () {
+    let mut listening = listening.ids.lock().unwrap();
+
+    if let Some(index) = listening.iter().position(|p| p.identifier == id) {
+        listening.remove(index);
+    };
+}
+
+#[tauri::command]
 fn subscribe(
     listening: State<'_, Listening>,
     modules: State<'_, Modules>,
@@ -264,7 +273,8 @@ pub fn run() {
             categories,
             ids,
             subscribe,
-            get_subscribed
+            get_subscribed,
+            unsubscribe
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
