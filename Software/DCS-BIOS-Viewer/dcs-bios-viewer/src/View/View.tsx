@@ -23,6 +23,18 @@ export const View = () => {
         fetchSubscribed()
     }, []);
 
+    useEffect(()=>{
+        setSetselectedModule(modules[0])
+    },[modules])
+
+    useEffect(()=>{
+        getIds(selectedModule,categories[0])
+    },[categories])
+
+    useEffect(()=>{
+        setSelectedId(ids[0])
+    },[ids])
+
     function getCategories(moduleName: string) {
         setSetselectedModule(moduleName)
         invoke("categories", { moduleName: moduleName }).then((v) => {
