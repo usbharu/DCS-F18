@@ -40,10 +40,9 @@ fn setup_socket(
     let source_c = bind.to_string();
     let mut udp_source = UdpSource::from_addr(
         bind,
-        &Ipv4Addr::from_str(addr).unwrap(),
-        &Ipv4Addr::from_str(interface).unwrap(),
-    )
-    .unwrap();
+        &Ipv4Addr::from_str(addr).map_err(|_| "Addressが不正です".to_string())?,
+        &Ipv4Addr::from_str(interface).map_err(|_| "Interfaceが不正です".to_string())?,
+    ).map_err(|e| e.to_string())?;
     tauri::async_runtime::spawn({
         let source = source.addr.clone();
         let listening = listening.ids.clone();
@@ -117,21 +116,21 @@ fn modules(modules: State<'_, Modules>) -> Vec<String> {
 }
 
 #[tauri::command]
-fn categories(modules: State<'_, Modules>, module_name: &str) -> Vec<String> {
+fn categories(modules: State<'_, Modules>, module_name: &str) -> Result< Vec<String>,String> {
     let path = &modules
         .modules
         .iter()
         .find(|v| v.name == module_name)
         .unwrap()
         .path;
-    let file = File::open(path).unwrap();
+    let file = File::open(path).map_err(|e| e.to_string())?;
     let result: HashMap<String, HashMap<String, Function>> = match serde_json::from_reader(file) {
         Ok(v) => v,
         Err(_) => {
-            return vec![];
+            return Ok(vec![]);
         }
     };
-    result.iter().map(|v| v.0.clone()).collect()
+    Ok(result.iter().map(|v| v.0.clone()).collect())
 }
 
 #[tauri::command]

@@ -78,21 +78,24 @@ export const View = () => {
             <form onSubmit={(e) => {
                 subscribe(e)
             }}>
-                <select onChange={(e) => getCategories(e.currentTarget.value)}>
+                <label htmlFor="select-module">Module</label>
+                <select id="select-module" onChange={(e) => getCategories(e.currentTarget.value)}>
                     {
                         modules.map(module => (
                             <option key={module} value={module}>{module}</option>
                         ))
                     }
                 </select>
-                <select onChange={(e) => getIds(selectedModule, e.currentTarget.value)}>
+                <label htmlFor="select-categories">Categories</label>
+                <select id="select-categories" onChange={(e) => getIds(selectedModule, e.currentTarget.value)}>
                     {
                         categories.map(id => (
                             <option key={id} value={id}>{id}</option>
                         ))
                     }
                 </select>
-                <select onChange={(e) => setSelectedId(e.currentTarget.value)}>
+                <label htmlFor="select-id">Id</label>
+                <select id="select-id" onChange={(e) => setSelectedId(e.currentTarget.value)}>
                     {
                         ids.map(id => (
                             <option key={id} value={id}>{id}</option>

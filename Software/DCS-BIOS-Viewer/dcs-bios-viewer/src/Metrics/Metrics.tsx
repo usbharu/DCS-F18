@@ -62,22 +62,23 @@ export const Metrics: React.FC<{ fun: Function, OnRemove: OnRemove }> = ({ fun, 
 
     function remove(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
         e.preventDefault();
-        invoke("unsubscribe",{id:fun.identifier}).then(() => {
+        invoke("unsubscribe", { id: fun.identifier }).then(() => {
             OnRemove(fun.identifier)
-        }).catch((e)=>console.error(e)
+        }).catch((e) => console.error(e)
         );
     }
 
     return (
-        <div>
-            <p>{fun.identifier}</p>
+        <div className="metrics">
+             <button className="metrics-remove-button" onClick={(e) => remove(e)}>x</button>
+            <p className="metrics-id">{fun.identifier}</p>
             {
                 data.sort((a, b) => a.address - b.address).map((v) => (
                     <p key={v.address}>{v.address} + {v.value}</p>
                 )
                 )
             }
-            <button onClick={(e) => remove(e)}>Remove</button>
+
         </div>
     )
 }
