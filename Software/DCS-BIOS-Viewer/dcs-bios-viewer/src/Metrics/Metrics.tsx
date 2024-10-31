@@ -23,7 +23,7 @@ export type Function = {
 
 export type Data = {
     address: number,
-    value: number | string
+    value: number
 }
 
 export type OnRemove = (id: string) => void;

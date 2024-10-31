@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fmt::format;
 use std::fs::File;
-use std::io::{BufWriter, Write};
+use std::io::{BufWriter, Error, Stderr, Write};
+use std::vec;
 
 #[allow(non_camel_case_types)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -19,7 +21,7 @@ pub struct Output {
     pub shift_by: Option<u16>,
     pub suffix: String,
     pub r#type: Type,
-    pub max_length: Option<u16>
+    pub max_length: Option<u16>,
 }
 #[allow(non_camel_case_types)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -99,6 +101,24 @@ pub fn write_file(file: File, vec: &Vec<Function>) -> Result<(), std::io::Error>
         }
     }
 
+    writer.flush()?;
+    Ok(())
+}
+
+pub fn write_file_enum(file: File, vec: &Vec<Function>) -> Result<(), Error> {
+    let mut writer = BufWriter::new(file);
+
+    writer.write_all(format!("pub enum Output<'a>{{\nStringType {{ address: u16,\nsuffix: &'a str,\nmax_length: u16\n}},\nIntegerType{{ address:u16,\nmask:u16,\nshift_by:u16}}}}\n").as_bytes())?;
+
+    for ele in vec {
+        for (index, output) in ele.outputs.iter().enumerate() {
+            let bytes = match output.r#type {
+                            Type::integer => format!("pub const {}_OUTPUT_{}: Output = IntegerType{{\naddress: {},\nmask: {},\nshift_by: {}}};\n",ele.identifier,index,output.address,output.mask.unwrap_or(65535),output.shift_by.unwrap_or(0)),
+                            Type::string => format!("pub const {}_OUTPUT_{}: Output = StringType{{\naddress: {},\nmax_length: {},\nsuffix: \"{}\",\n}};\n",ele.identifier,index,output.address,output.max_length.unwrap_or(2),output.suffix),
+                        };
+            writer.write_all(bytes.as_bytes())?;
+        }
+    }
     writer.flush()?;
     Ok(())
 }

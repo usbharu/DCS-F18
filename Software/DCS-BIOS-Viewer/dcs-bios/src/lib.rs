@@ -3,7 +3,6 @@
 use crate::packet::Receive;
 
 pub mod packet;
-pub mod dcs_bios_const;
 
 pub fn parse_packet(data: &[u8]) -> Option<[packet::Receive; 10]> {
     let sync = &data[..4];

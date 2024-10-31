@@ -14,7 +14,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use std::{env, iter, vec};
+use std::{env, vec};
 use tauri::{Emitter, Manager, State};
 use tokio::time;
 
@@ -89,8 +89,6 @@ fn setup_socket(
                                         if !list.contains_key(&x.address) {
                                             return None;
                                         }
-
-                                        
 
                                         Some(Data {
                                             address: x.address,
