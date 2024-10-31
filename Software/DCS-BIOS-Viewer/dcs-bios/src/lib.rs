@@ -3,7 +3,7 @@
 use crate::packet::Receive;
 
 pub mod packet;
-
+//todo イテレータみたいにして10個以上来たときも対応できるようにする
 pub fn parse_packet(data: &[u8]) -> Option<[packet::Receive; 10]> {
     let sync = &data[..4];
     if sync != [0x55;4] {
@@ -26,13 +26,12 @@ pub fn parse_packet(data: &[u8]) -> Option<[packet::Receive; 10]> {
             Ok(v) => v,
             Err(_) => return None,
         });
-        let x = &data[start..(start + 4 + len as usize)];
 
         let data = data.get((start + 4)..(len as usize + start + 4))?;
         r[count] = Receive {
             address,
             data_length: len,
-            data: [data[0], data[1]],
+            data: data,
         };
         count += 1;
 

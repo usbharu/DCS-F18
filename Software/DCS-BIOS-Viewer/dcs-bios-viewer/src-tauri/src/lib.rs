@@ -90,6 +90,8 @@ fn setup_socket(
                                             return None;
                                         }
 
+                                        //todo functionからtypeをみてintegerdataとstringdataに入れる
+
                                         Some(Data {
                                             address: x.address,
                                             value: u16::from_le_bytes(x.data)
