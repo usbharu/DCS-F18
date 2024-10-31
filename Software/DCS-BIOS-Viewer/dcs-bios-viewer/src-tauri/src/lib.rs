@@ -2,10 +2,12 @@ mod data;
 mod source;
 
 use crate::data::Data;
+use crate::data::Data::*;
 use crate::source::{Source, UdpSource};
 use dcs_bios::parse_packet;
-use dcs_bios_const_generator::{parse_file, Function, Output};
+use dcs_bios_const_generator::{parse_file, Function, Output, Type};
 use serde::{Deserialize, Serialize};
+use core::str;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Error;
@@ -92,9 +94,18 @@ fn setup_socket(
 
                                         //todo functionからtypeをみてintegerdataとstringdataに入れる
 
-                                        Some(Data {
-                                            address: x.address,
-                                            value: u16::from_le_bytes(x.data)
+                                        let func = match list.get(&x.address) {
+                                            Some(v) => v,
+                                            None => {
+                                                return None;
+                                            }
+                                        };
+                                        Some(match func.r#type {
+                                            Type::integer => IntegerData {
+                                                address: x.address,
+                                                value: u16::from_le_bytes([x.data[0], x.data[1]]),
+                                            },
+                                            Type::string => StringData { address: x.address, value: str::from_utf8(x.data).unwrap().to_string() }
                                         })
                                     })
                                     .collect::<Vec<Data>>();
@@ -102,8 +113,8 @@ fn setup_socket(
                                     continue;
                                 }
 
-                                map.sort_by_key(|f| f.address);
-                                map.dedup_by_key(|f| f.address);
+                                map.sort_by_key(|f| f.address());
+                                map.dedup_by_key(|f| f.address());
                                 println!("{:?}", map);
                                 app_handle.emit("data", map).unwrap();
                             }

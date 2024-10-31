@@ -4,11 +4,20 @@ use std::collections::HashMap;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub enum Data {
-    IntegerData { address: u16, value: u16 },
+    IntegerData {  address: u16, value: u16 },
     StringData { address: u16, value: String },
 }
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Module<'a> {
     pub name: &'a str,
     pub functions: HashMap<&'a str, Function>,
+}
+
+impl Data {
+    pub fn address(&self) -> u16 {
+        match self {
+            Data::IntegerData { address, value: _ } => *address ,
+            Data::StringData { address, value: _ } => *address ,
+        }
+    }
 }
