@@ -3,8 +3,11 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
+#[serde(tag = "type")]
 pub enum Data {
+    #[serde(rename = "integer")]
     IntegerData {  address: u16, value: u16 },
+    #[serde(rename = "string")]
     StringData { address: u16, value: String },
 }
 #[derive(Deserialize, Serialize, Debug)]

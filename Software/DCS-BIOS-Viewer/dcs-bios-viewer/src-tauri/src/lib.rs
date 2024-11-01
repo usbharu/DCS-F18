@@ -4,10 +4,11 @@ mod source;
 use crate::data::Data;
 use crate::data::Data::*;
 use crate::source::{Source, UdpSource};
-use dcs_bios::parse_packet;
+use core::str;
+use dcs_bios::{parse_packet, DcsBiosPacket};
 use dcs_bios_const_generator::{parse_file, Function, Output, Type};
 use serde::{Deserialize, Serialize};
-use core::str;
+use source::TcpSource;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Error;
@@ -41,12 +42,13 @@ fn setup_socket(
     *(source.addr.lock().unwrap()) = Some(bind.to_string());
 
     let source_c = bind.to_string();
-    let mut udp_source = UdpSource::from_addr(
-        bind,
-        &Ipv4Addr::from_str(addr).map_err(|_| "Addressが不正です".to_string())?,
-        &Ipv4Addr::from_str(interface).map_err(|_| "Interfaceが不正です".to_string())?,
-    )
-    .map_err(|e| e.to_string())?;
+    // let mut udp_source = UdpSource::from_addr(
+    //     bind,
+    //     &Ipv4Addr::from_str(addr).map_err(|_| "Addressが不正です".to_string())?,
+    //     &Ipv4Addr::from_str(interface).map_err(|_| "Interfaceが不正です".to_string())?,
+    // )
+
+    let mut udp_source = TcpSource::from_addr(bind).map_err(|e| e.to_string())?;
     tauri::async_runtime::spawn({
         let source = source.addr.clone();
         let listening = listening.ids.clone();
@@ -55,7 +57,7 @@ fn setup_socket(
             udp_source.setup().unwrap();
             let mut list: HashMap<u16, Output> = HashMap::new();
             loop {
-                if counter % 1000 == 0 {
+                if counter % 100 == 0 {
                     let a = source.lock().unwrap();
                     let a = a.as_ref().unwrap();
 
@@ -70,6 +72,8 @@ fn setup_socket(
                                 .collect::<HashMap<u16, Output>>()
                         })
                         .collect::<HashMap<u16, Output>>();
+
+                    println!("{:?}", list);
                     if source_c != *a {
                         println!("break!");
                         break;
@@ -79,46 +83,118 @@ fn setup_socket(
 
                 match udp_source.read() {
                     Ok(v) => {
-                        match parse_packet(&*v) {
-                            None => {}
-                            Some(v) => {
-                                let mut map: Vec<Data> = v
-                                    .iter()
-                                    .filter_map(|x| {
-                                        if x.address == 0 {
-                                            return None;
-                                        }
-                                        if !list.contains_key(&x.address) {
-                                            return None;
-                                        }
+                        let mut map = vec![];
 
-                                        //todo functionからtypeをみてintegerdataとstringdataに入れる
-
-                                        let func = match list.get(&x.address) {
-                                            Some(v) => v,
-                                            None => {
-                                                return None;
-                                            }
-                                        };
-                                        Some(match func.r#type {
-                                            Type::integer => IntegerData {
-                                                address: x.address,
-                                                value: u16::from_le_bytes([x.data[0], x.data[1]]),
-                                            },
-                                            Type::string => StringData { address: x.address, value: str::from_utf8(x.data).unwrap().to_string() }
-                                        })
-                                    })
-                                    .collect::<Vec<Data>>();
-                                if map.is_empty() {
-                                    continue;
-                                }
-
-                                map.sort_by_key(|f| f.address());
-                                map.dedup_by_key(|f| f.address());
-                                println!("{:?}", map);
-                                app_handle.emit("data", map).unwrap();
+                        let mut parser = dcs_bios::parser::ProtocolParser::new(|address, data| {
+                            if (address[0] == 1078) {
+                                // println!("{:?}", (data[0].to_le() & 0xfe00) >> 9);
                             }
-                        };
+                        });
+                        for i in 0..v.len() {
+                            match parser.process_char(v[i]) {
+                                Some(r) => {
+                                    // println!("address= {}",r.address) ;
+                                    if !list.contains_key(&r.address) {
+                                        continue;
+                                    };
+                                    let func = match list.iter().find(|(a, _)| **a == r.address) {
+                                        Some(v) => v.1,
+                                        None => {
+                                            continue;
+                                        }
+                                    };
+                                    map.push(match func.r#type {
+                                        Type::integer => IntegerData {
+                                            address: r.address,
+                                            value: u16::from_le_bytes([r.data[30],r.data[31]]),
+                                        },
+                                        Type::string => StringData {
+                                            address: r.address,
+                                            value: str::from_utf8(&r.data).unwrap_or("<EEROR>").to_string(),
+                                        },
+                                    });
+                                
+                                }
+                                None => {}
+                            }
+                        }
+
+                        if map.is_empty() {
+                            continue;
+                        }
+                        println!("{:?}", map);
+                        app_handle.emit("data", map).unwrap();
+
+                        // let map = DcsBiosPacket::new(&v).filter_map(|x| {
+                        //     // if !list.contains_key(&x.address) {
+                        //     //     return None;
+                        //     // }
+
+                        //     //todo functionからtypeをみてintegerdataとstringdataに入れる
+
+                        //     let func = match list.iter().find(|(a,_)| {**a == x.address}) {
+                        //         Some(v) => v.1,
+                        //         None => {
+                        //             return None;
+                        //         }
+                        //     };
+                        //     Some(match func.r#type {
+                        //         Type::integer => IntegerData {
+                        //             address: x.address,
+                        //             value: u16::from_le_bytes([x.data[0], x.data[1]]),
+                        //         },
+                        //         Type::string => StringData {
+                        //             address: x.address,
+                        //             value: str::from_utf8(x.data).unwrap_or("").to_string(),
+                        //         },
+                        //     })
+                        // }).collect::<Vec<Data>>();
+                        // if map.is_empty() {
+                        //     continue;
+                        // }
+                        // println!("{:?}",map);
+                        // app_handle.emit("data", map).unwrap();
+
+                        // match parse_packet(&*v) {
+                        //     None => {}
+                        //     Some(v) => {
+                        //         let mut map: Vec<Data> = v
+                        //             .iter()
+                        //             .filter_map(|x| {
+                        //                 if x.address == 0 {
+                        //                     return None;
+                        //                 }
+                        //                 if !list.contains_key(&x.address) {
+                        //                     return None;
+                        //                 }
+
+                        //                 //todo functionからtypeをみてintegerdataとstringdataに入れる
+
+                        //                 let func = match list.get(&x.address) {
+                        //                     Some(v) => v,
+                        //                     None => {
+                        //                         return None;
+                        //                     }
+                        //                 };
+                        //                 Some(match func.r#type {
+                        //                     Type::integer => IntegerData {
+                        //                         address: x.address,
+                        //                         value: u16::from_le_bytes([x.data[0], x.data[1]]),
+                        //                     },
+                        //                     Type::string => StringData { address: x.address, value: str::from_utf8(x.data).unwrap().to_string() }
+                        //                 })
+                        //             })
+                        //             .collect::<Vec<Data>>();
+                        //         if map.is_empty() {
+                        //             continue;
+                        //         }
+
+                        //         map.sort_by_key(|f| f.address());
+                        //         map.dedup_by_key(|f| f.address());
+                        //         println!("{:?}", map);
+                        //         app_handle.emit("data", map).unwrap();
+                        //     }
+                        // };
                     }
                     Err(_) => {
                         time::sleep(Duration::from_micros(100)).await;
@@ -150,7 +226,10 @@ async fn categories(
     if module.is_none() {
         let _ = module.get_func();
     }
-    Ok(module.categories.clone().unwrap())
+    module
+        .categories
+        .clone()
+        .ok_or("Failed to fetch categories".to_string())
 }
 
 #[tauri::command(async)]

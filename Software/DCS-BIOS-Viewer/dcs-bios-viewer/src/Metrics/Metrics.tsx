@@ -8,7 +8,8 @@ export type Output = {
     max_value?: number,
     shift_by?: number,
     suffix: string,
-    type: string
+    type: string,
+    max_length?: number
 }
 
 export type Function = {

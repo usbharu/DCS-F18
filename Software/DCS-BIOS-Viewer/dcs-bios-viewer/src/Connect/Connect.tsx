@@ -5,7 +5,7 @@ import React from "react";
 
 export const Connect = () => {
 
-    const [bind, setBind] = useState("0.0.0.0:5010")
+    const [bind, setBind] = useState("127.0.0.1:7778")
     const [address, setAddress] = useState("239.255.50.10")
     const [interfaceAddr, setInterfaceAddr] = useState("0.0.0.0")
     const [errorMessage,setErrorMessage] = useState<string>()

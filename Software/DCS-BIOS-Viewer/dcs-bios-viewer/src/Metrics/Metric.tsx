@@ -9,26 +9,37 @@ export const Metric: React.FC<{ output: Output }> = ({ output }) => {
     const mask = !!output.mask ? output.mask : 65535
     const shift = !!output.shift_by ? output.shift_by : 0
 
-    function value(data: string|number|undefined): string | number {
+    function value(oldData: string | number | undefined, newData: string | number | undefined): string | number {
         if (output.type == "string") {
-            if (data === undefined) {
+            if (newData === undefined) {
                 return output.suffix + ""
             }
-            return output.suffix + (data as string)
+            let d = newData as string;    
+            if (d.length > output.max_length) {
+                d = d.substring(0, output.max_length);
+            } else {
+                let od = oldData as string | undefined;                
+                d = d + od?.substring(od.length - (od.length - d.length), od.length)
+            }
+            return output.suffix + d
         }
-        if (data === undefined) {
+        if (newData === undefined) {
             return 0
         }
-        return ((data as number) & mask) >> shift
+        return ((newData as number) & mask) >> shift
     }
 
     useEffect(() => {
         let unlisten = listen("data", (d) => {
+
             let dat = d.payload as Data[];
-            let b: Data | undefined = dat.find((p) => p.address == output.address);
-            if (b !== undefined) {
-                setData(b.value)
-            }
+            console.log(dat);
+            
+            dat.forEach(element => {
+                if (element.address == output.address) {
+                    setData(value(data, element.value))
+                }
+            });
         })
 
         return () => {
@@ -36,10 +47,10 @@ export const Metric: React.FC<{ output: Output }> = ({ output }) => {
                 r()
             }).catch((e) => console.error(e))
         }
-    }, [])
+    }, [data])
 
 
     return (
-        <span title={output.description}>Address: {output.address} Value: {value(data)} Mask: {output.mask} Shift: {output.shift_by} Type: {output.type}</span>
+        <span title={output.description}>Address: {output.address} Value: {data} Mask: {output.mask} Shift: {output.shift_by} Type: {output.type}</span>
     )
 }
