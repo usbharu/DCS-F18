@@ -1,6 +1,7 @@
 #![no_std]
 
-use core::{ops::Range, str};
+
+use core::str;
 
 use error::Error;
 use mem::MemoryMap;
