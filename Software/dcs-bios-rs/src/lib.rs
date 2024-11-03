@@ -1,7 +1,6 @@
 #![no_std]
 
-
-use core::str;
+use core::{marker::PhantomData, str};
 
 use error::Error;
 use mem::MemoryMap;
@@ -11,15 +10,31 @@ pub mod error;
 pub mod mem;
 pub mod source;
 
-pub trait DcsBios {
-    fn get_integer(&self, address: u16, mask: u16, shift_by: u16) -> Option<u16>;
-    fn get_string(&self, address: u16, length: u16) -> Option<&str>;
-    fn read(&mut self,listener:&[Listener]) -> Result<(),Error>;
+pub trait DcsBios<M:MemoryMap> {
+    fn get_self_integer(&self, address: u16, mask: u16, shift_by: u16) -> Option<u16>;
+    fn get_self_string(&self, address: u16, length: u16) -> Option<&str>;
+    fn read<'a,F: Fn(u16, &'a M)>(
+        &'a mut self,
+        listener: &[Listener<'a,M, F>],
+    ) -> Result<(), Error>;
+
+    fn get_integer(memory_map: &M,address: u16, mask: u16, shift_by: u16) -> Option<u16> {
+        let d = memory_map.read(address..=(address + 1))?;
+        Some((u16::from_le_bytes([d[0], d[1]]) & mask) >> shift_by)
+    }
+
+    fn get_string(memory_map: &M,address: u16,length: u16) -> Option<&str>{
+        let d = memory_map.read(address..=(address + (length - 1)))?;
+        str::from_utf8(d).ok().or(Some("&E&"))
+    }
 }
 
-pub struct Listener{
+
+
+pub struct Listener<'a,M: MemoryMap + 'a, F: Fn(u16, &'a M)> {
+    pub _phantom: PhantomData<&'a M>,
     pub address: u16,
-    pub func: fn(address:u16)
+    pub func: F,
 }
 
 pub struct DcsBiosImpl<S: Source, M: MemoryMap> {
@@ -33,32 +48,41 @@ impl<S: Source, M: MemoryMap> DcsBiosImpl<S, M> {
     }
 }
 
-impl<S: Source, M: MemoryMap> DcsBios for DcsBiosImpl<S, M> {
-    fn get_integer(&self, address: u16, mask: u16, shift_by: u16) -> Option<u16> {
-        let d = self.memory_map.read(address..(address + 2))?;
-        Some((u16::from_le_bytes([d[0], d[1]]) & mask) >> shift_by)
+impl<S: Source, M: MemoryMap> DcsBios<M> for DcsBiosImpl<S, M> {
+    fn get_self_integer(&self, address: u16, mask: u16, shift_by: u16) -> Option<u16> {
+        DcsBiosImpl::<S,M>::get_integer(&self.memory_map,address,mask,shift_by)
     }
 
-    fn get_string(&self, address: u16, length: u16) -> Option<&str> {
-        let d = self.memory_map.read(address..(address + length))?;
-        str::from_utf8(d).ok().or(Some("&E&"))
+    fn get_self_string(&self, address: u16, length: u16) -> Option<&str> {
+        DcsBiosImpl::<S,M>::get_string(&self.memory_map, address, length)
     }
 
-    fn read(&mut self,listener:&[Listener]) -> Result<(),Error> {
+    fn read<'a,F: Fn(u16, &'a M)>(&'a mut self, listener: &[Listener<'a,M, F>]) -> Result<(), Error> {
         let bytes = self.source.read()?;
         if bytes.is_none() {
             return Ok(());
         };
         let bytes = bytes.unwrap();
-        let packet = DcsBiosPacket::new(bytes);
+        let packet = DcsBiosPacket::<'a>::new(bytes);
         for ele in packet {
             let address = ele.address;
             let length = ele.length;
-            let range = address..(address + length);
-            self.memory_map.write(address, ele.data)?;
+            let range = address..=(address + (length - 1));
+            {
+                let mut mem : &mut M = &mut self.memory_map;
+                mem.write(address, ele.data)?;
+            };
+            
+            
+        }
+        let packet = DcsBiosPacket::<'a>::new(bytes);
+        for ele in packet {
+            let address = ele.address;
+            let length = ele.length;
+            let range = address..=(address + (length - 1));
             for ele in listener {
                 if range.contains(&ele.address) {
-                    (ele.func)(ele.address);
+                    (ele.func)(ele.address, &self.memory_map);
                 }
             }
         }
@@ -72,10 +96,10 @@ struct DcsBiosPacket<'a> {
 }
 
 impl<'a> DcsBiosPacket<'a> {
-    fn new(data: &'a [u8]) -> DcsBiosPacket{
-        DcsBiosPacket{
+    fn new(data: &'a [u8]) -> DcsBiosPacket {
+        DcsBiosPacket {
             data,
-            next_offset: 0
+            next_offset: 0,
         }
     }
 }
@@ -122,7 +146,7 @@ fn parse_packet_iter(data: &[u8], offset: usize) -> Option<(Receive, usize)> {
     Some((
         Receive {
             address,
-            length:len,
+            length: len,
             data,
         },
         start + 4 + len as usize,

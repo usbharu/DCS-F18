@@ -1,5 +1,6 @@
 
 #[derive(Debug)]
 pub enum Error{
-    MemoryMapError()
+    MemoryMapError(),
+    SourceError()
 }

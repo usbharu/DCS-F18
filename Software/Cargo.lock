@@ -542,6 +542,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "dcs-bios-cli"
+version = "0.1.0"
+dependencies = [
+ "dcs-bios",
+]
+
+[[package]]
 name = "dcs-bios-root"
 version = "0.1.0"
 
