@@ -1,58 +1,63 @@
 use std::{
-    cell::RefCell, fs::File, io::{BufWriter, Error, Write}, net::{Ipv4Addr, SocketAddr, UdpSocket}, ops::RangeInclusive, rc::Rc
+    io::Error,
+    net::{Ipv4Addr, UdpSocket},
+    ops::RangeInclusive,
 };
 
 use dcs_bios::{mem::MemoryMap, source::Source, DcsBios, DcsBiosImpl, Listener};
 
 pub fn main_loop(source: UdpSource) {
-    let mut dcs_bios = DcsBiosImpl::new(source, VecMemoryMap::new([0;65536].to_vec()));
-    
+    let mut dcs_bios = DcsBiosImpl::new(source, VecMemoryMap::new([0; 65536].to_vec()));
+
     // let listener = ;
 
-    type Func = fn(u16,&VecMemoryMap) -> ();
-    let f:Func =  |v:u16,m|{
-        let data = DcsBiosImpl::<UdpSource,VecMemoryMap>::get_string(m, 0x0400,6);
-        let file = File::create("dump.bin").unwrap();
-        let mut writer = BufWriter::new(file);
-        writer.write_all(&m.mem).unwrap();
-        writer.flush();
-        println!("{}: {:?}", v,data);
-        // panic!()
+    type Func = fn(u16, &VecMemoryMap) -> ();
+    let f: Func = |v: u16, m| {
+        let data = DcsBiosImpl::<UdpSource, VecMemoryMap>::get_string(m, 0x0400, 6);
+        println!("{}: {:?}", v, data);
     };
-    let f2:Func =|v,m| {
-        let data = DcsBiosImpl::<UdpSource,VecMemoryMap>::get_integer(m, 1078,0xfe00,9);
-        println!("{}: {:?}", v,data);
+    let f2: Func = |v, m| {
+        let data = DcsBiosImpl::<UdpSource, VecMemoryMap>::get_integer(m, 1078, 0xfe00, 9);
+        println!("{}: {:?}", v, data);
     };
-    let f3:Func = |v,m|{
-        let data = DcsBiosImpl::<UdpSource,VecMemoryMap>::get_string(m, 0x748a,6);
-        println!("{}: {:?}", v,data);
+    let f3: Func = |v, m| {
+        let data = DcsBiosImpl::<UdpSource, VecMemoryMap>::get_string(m, 0x748a, 6);
+        println!("{}: {:?}", v, data);
     };
-    let f4:Func = |v,m|{
-        let data = DcsBiosImpl::<UdpSource,VecMemoryMap>::get_string(m, 0x7490,6);
-        println!("{}: {:?}", v,data);
+    let f4: Func = |v, m| {
+        let data = DcsBiosImpl::<UdpSource, VecMemoryMap>::get_string(m, 0x7490, 6);
+        println!("{}: {:?}", v, data);
     };
-    let listeners : &[Listener<VecMemoryMap, Func>] = &[Listener {
-        address: 1078,
-        func: f2,
-        _phantom: std::marker::PhantomData,
-    }, Listener {
-        _phantom: std::marker::PhantomData,
-        address: 0x0400,
-        func: f,
-    }, Listener{
-        _phantom: std::marker::PhantomData,
-        address: 0x748a,
-        func: f3,
-    }, Listener{
-        _phantom: std::marker::PhantomData,
-        address: 0x7490,
-        func: f4,
-    }];
+    let listeners: &[Listener<VecMemoryMap, Func>] = &[
+        Listener {
+            address: 1078,
+            func: f2,
+            _phantom: std::marker::PhantomData,
+        },
+        Listener {
+            _phantom: std::marker::PhantomData,
+            address: 0x0400,
+            func: f,
+        },
+        Listener {
+            _phantom: std::marker::PhantomData,
+            address: 0x748a,
+            func: f3,
+        },
+        Listener {
+            _phantom: std::marker::PhantomData,
+            address: 0x7490,
+            func: f4,
+        },
+    ];
 
     loop {
-        dcs_bios
-            .read(&listeners);
-            
+        match dcs_bios.read(listeners) {
+            Ok(_) => {}
+            Err(e) => {
+                println!("Error: {:?}", e);
+            }
+        }
     }
 }
 
@@ -116,10 +121,11 @@ impl MemoryMap for VecMemoryMap {
         for (index, ele) in data.iter().enumerate() {
             self.mem[address as usize + index] = *ele;
         }
-        Ok(address..=(address + (data.len() as u16-1)))
+        Ok(address..=(address + (data.len() as u16 - 1)))
     }
 
     fn read(&self, range: RangeInclusive<u16>) -> Option<&[u8]> {
-        self.mem.get((*range.start() as usize)..=(*range.end() as usize))
+        self.mem
+            .get((*range.start() as usize)..=(*range.end() as usize))
     }
 }

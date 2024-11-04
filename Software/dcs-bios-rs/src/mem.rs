@@ -1,4 +1,3 @@
-
 use core::ops::RangeInclusive;
 
 use heapless::Vec;
@@ -21,7 +20,7 @@ impl MemoryMap for HeaplessMemoryMap {
                 .insert(address as usize + index, *ele)
                 .map_err(|_| Error::MemoryMapError())?;
         }
-        Ok(address..=(address + data.len() as u16-1))
+        Ok(address..=(address + data.len() as u16 - 1))
     }
 
     fn read(&self, range: RangeInclusive<u16>) -> Option<&[u8]> {

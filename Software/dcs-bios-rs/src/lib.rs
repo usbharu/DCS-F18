@@ -10,28 +10,26 @@ pub mod error;
 pub mod mem;
 pub mod source;
 
-pub trait DcsBios<M:MemoryMap> {
+pub trait DcsBios<M: MemoryMap> {
     fn get_self_integer(&self, address: u16, mask: u16, shift_by: u16) -> Option<u16>;
     fn get_self_string(&self, address: u16, length: u16) -> Option<&str>;
-    fn read<'a,F: Fn(u16, &'a M)>(
+    fn read<'a, F: Fn(u16, &'a M)>(
         &'a mut self,
-        listener: &[Listener<'a,M, F>],
+        listener: &[Listener<'a, M, F>],
     ) -> Result<(), Error>;
 
-    fn get_integer(memory_map: &M,address: u16, mask: u16, shift_by: u16) -> Option<u16> {
+    fn get_integer(memory_map: &M, address: u16, mask: u16, shift_by: u16) -> Option<u16> {
         let d = memory_map.read(address..=(address + 1))?;
         Some((u16::from_le_bytes([d[0], d[1]]) & mask) >> shift_by)
     }
 
-    fn get_string(memory_map: &M,address: u16,length: u16) -> Option<&str>{
+    fn get_string(memory_map: &M, address: u16, length: u16) -> Option<&str> {
         let d = memory_map.read(address..=(address + (length - 1)))?;
         str::from_utf8(d).ok().or(Some("&E&"))
     }
 }
 
-
-
-pub struct Listener<'a,M: MemoryMap + 'a, F: Fn(u16, &'a M)> {
+pub struct Listener<'a, M: MemoryMap + 'a, F: Fn(u16, &'a M)> {
     pub _phantom: PhantomData<&'a M>,
     pub address: u16,
     pub func: F,
@@ -50,14 +48,17 @@ impl<S: Source, M: MemoryMap> DcsBiosImpl<S, M> {
 
 impl<S: Source, M: MemoryMap> DcsBios<M> for DcsBiosImpl<S, M> {
     fn get_self_integer(&self, address: u16, mask: u16, shift_by: u16) -> Option<u16> {
-        DcsBiosImpl::<S,M>::get_integer(&self.memory_map,address,mask,shift_by)
+        DcsBiosImpl::<S, M>::get_integer(&self.memory_map, address, mask, shift_by)
     }
 
     fn get_self_string(&self, address: u16, length: u16) -> Option<&str> {
-        DcsBiosImpl::<S,M>::get_string(&self.memory_map, address, length)
+        DcsBiosImpl::<S, M>::get_string(&self.memory_map, address, length)
     }
 
-    fn read<'a,F: Fn(u16, &'a M)>(&'a mut self, listener: &[Listener<'a,M, F>]) -> Result<(), Error> {
+    fn read<'a, F: Fn(u16, &'a M)>(
+        &'a mut self,
+        listener: &[Listener<'a, M, F>],
+    ) -> Result<(), Error> {
         let bytes = self.source.read()?;
         if bytes.is_none() {
             return Ok(());
@@ -66,14 +67,10 @@ impl<S: Source, M: MemoryMap> DcsBios<M> for DcsBiosImpl<S, M> {
         let packet = DcsBiosPacket::<'a>::new(bytes);
         for ele in packet {
             let address = ele.address;
-            let length = ele.length;
-            let range = address..=(address + (length - 1));
             {
-                let mut mem : &mut M = &mut self.memory_map;
+                let mem: &mut M = &mut self.memory_map;
                 mem.write(address, ele.data)?;
             };
-            
-            
         }
         let packet = DcsBiosPacket::<'a>::new(bytes);
         for ele in packet {
@@ -122,7 +119,7 @@ impl<'a> Iterator for DcsBiosPacket<'a> {
 }
 
 fn parse_packet_iter(data: &[u8], offset: usize) -> Option<(Receive, usize)> {
-    let start = if (offset == 0) {
+    let start = if offset == 0 {
         let sync = data.get(..4)?;
         if sync != [0x55; 4] {
             return None;
