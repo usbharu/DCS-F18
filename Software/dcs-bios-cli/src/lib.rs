@@ -1,5 +1,5 @@
 use std::{
-    io::Error,
+    io::{Error, ErrorKind},
     net::{Ipv4Addr, UdpSocket},
     ops::RangeInclusive,
     path::PathBuf,
@@ -56,7 +56,7 @@ pub fn main_loop(source: UdpSource) {
         match dcs_bios.read(listeners) {
             Ok(_) => {}
             Err(e) => {
-                println!("Error: {:?}", e);
+//                println!("Error: {:?}", e);
             }
         }
     }
@@ -94,7 +94,9 @@ impl Source for UdpSource {
             .udp_socket
             .recv_from(&mut self.buf)
             .map_err(|e| {
-                println!("{:?}", e);
+                if e.kind() != ErrorKind::TimedOut {
+                    println!("{:?}",e.kind());
+                }
                 dcs_bios::error::Error::SourceError()
             })?
             .0);
@@ -132,15 +134,18 @@ impl MemoryMap for VecMemoryMap {
 }
 
 pub fn list_modules(path: PathBuf) -> Vec<String> {
-    path.read_dir()
-        .unwrap()
-        .filter_map(|v| {
-            v.ok().and_then(|p| -> Option<String> {
-                let name = p.file_name();
-                name.into_string().ok()
+    let mut modules : Vec<String> = path.read_dir()
+            .unwrap()
+            .filter_map(|v| {
+                v.ok().and_then(|p| -> Option<String> {
+                    let name = p.file_name();
+                    name.into_string().ok()
+                })
             })
-        })
-        .filter(|p| p.ends_with(".json"))
-        .map(|p| p.strip_suffix(".json").unwrap().to_string())
-        .collect()
+            .filter(|p| p.ends_with(".json"))
+            .map(|p| p.strip_suffix(".json").unwrap().to_string())
+            .collect();
+
+    modules.sort();
+    modules
 }
