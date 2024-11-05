@@ -2,7 +2,7 @@ use std::{env, path::PathBuf};
 
 use clap::Parser;
 use clap_num::maybe_hex;
-use dcs_bios_cli::{main_loop, setup_source};
+use dcs_bios_cli::{list_modules, main_loop, setup_source};
 #[derive(Parser, Debug)]
 #[command(version, about)]
 struct Args {
@@ -38,6 +38,10 @@ fn main() {
     println!("{:?}", args.path);
     println!("{:?}", args.address);
     println!("{:?}", args.id);
+
+    for ele in list_modules(args.path.unwrap()) {
+        println!("{}",ele);
+    }
 
     let source = setup_source().unwrap();
     main_loop(source);

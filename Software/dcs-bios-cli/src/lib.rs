@@ -2,6 +2,7 @@ use std::{
     io::Error,
     net::{Ipv4Addr, UdpSocket},
     ops::RangeInclusive,
+    path::PathBuf,
 };
 
 use dcs_bios::{mem::MemoryMap, source::Source, DcsBios, DcsBiosImpl, Listener};
@@ -128,4 +129,18 @@ impl MemoryMap for VecMemoryMap {
         self.mem
             .get((*range.start() as usize)..=(*range.end() as usize))
     }
+}
+
+pub fn list_modules(path: PathBuf) -> Vec<String> {
+    path.read_dir()
+        .unwrap()
+        .filter_map(|v| {
+            v.ok().and_then(|p| -> Option<String> {
+                let name = p.file_name();
+                name.into_string().ok()
+            })
+        })
+        .filter(|p| p.ends_with(".json"))
+        .map(|p| p.strip_suffix(".json").unwrap().to_string())
+        .collect()
 }

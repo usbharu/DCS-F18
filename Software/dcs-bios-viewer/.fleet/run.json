@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "name": "tauri dev",
+            "type": "npm",
+            "workingDir": "C:\\Users\\haruj\\RustroverProjects\\DCS-F18\\Software\\dcs-bios-viewer",
+            "command": "run",
+            "scripts": "tauri",
+            "commandArguments": [
+                "dev"
+            ],
+        }
+    ]
+}
