@@ -1,0 +1,12 @@
+{
+    "configurations": [
+
+        {
+            "name": "run dcs-bios-cli (1)",
+            "type": "cargo",
+            "workingDir": "C:\\Users\\haruj\\RustroverProjects\\DCS-F18\\Software",
+            "cargoArgs": ["run", "--package", "dcs-bios-cli", "--bin", "dcs-bios-cli"],
+            "executableArgs": ["-a","29890","-m","FA-18C_hornet"],
+        }
+    ]
+}

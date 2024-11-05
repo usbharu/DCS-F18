@@ -6,7 +6,7 @@ use std::{
 
 use json_type::{Function, Type};
 
-mod json_type;
+pub mod json_type;
 
 pub fn parse_file(file: File) -> Result<Vec<Function>, std::io::Error> {
     let result: HashMap<String, HashMap<String, Function>> = serde_json::from_reader(file)?;

@@ -1,8 +1,7 @@
+pub mod filter;
+
 use std::{
-    io::{Error, ErrorKind},
-    net::{Ipv4Addr, UdpSocket},
-    ops::RangeInclusive,
-    path::PathBuf,
+    fs::DirEntry, io::{Error, ErrorKind}, net::{Ipv4Addr, UdpSocket}, ops::RangeInclusive, path::PathBuf
 };
 
 use dcs_bios::{mem::MemoryMap, source::Source, DcsBios, DcsBiosImpl, Listener};
@@ -12,48 +11,19 @@ pub fn main_loop(source: UdpSource) {
 
     // let listener = ;
 
-    type Func = fn(u16, &VecMemoryMap) -> ();
-    let f: Func = |v: u16, m| {
-        let data = DcsBiosImpl::<UdpSource, VecMemoryMap>::get_string(m, 0x0400, 6);
-        println!("{}: {:?}", v, data);
-    };
-    let f2: Func = |v, m| {
-        let data = DcsBiosImpl::<UdpSource, VecMemoryMap>::get_integer(m, 1078, 0xfe00, 9);
-        println!("{}: {:?}", v, data);
-    };
-    let f3: Func = |v, m| {
-        let data = DcsBiosImpl::<UdpSource, VecMemoryMap>::get_string(m, 0x748a, 6);
-        println!("{}: {:?}", v, data);
-    };
+    type Func = fn(RangeInclusive<u16>, &VecMemoryMap) -> ();
     let f4: Func = |v, m| {
         let data = DcsBiosImpl::<UdpSource, VecMemoryMap>::get_string(m, 0x7490, 6);
-        println!("{}: {:?}", v, data);
+        println!("{:?}: {:?}", v, data);
     };
-    let listeners: &[Listener<VecMemoryMap, Func>] = &[
-        Listener {
-            address: 1078,
-            func: f2,
-            _phantom: std::marker::PhantomData,
-        },
+    let listener =
         Listener {
             _phantom: std::marker::PhantomData,
-            address: 0x0400,
-            func: f,
-        },
-        Listener {
-            _phantom: std::marker::PhantomData,
-            address: 0x748a,
-            func: f3,
-        },
-        Listener {
-            _phantom: std::marker::PhantomData,
-            address: 0x7490,
+            address: 0..=65535,
             func: f4,
-        },
-    ];
-
+        };
     loop {
-        match dcs_bios.read(listeners) {
+        match dcs_bios.read(&listener) {
             Ok(_) => {}
             Err(e) => {
 //                println!("Error: {:?}", e);
@@ -133,19 +103,19 @@ impl MemoryMap for VecMemoryMap {
     }
 }
 
-pub fn list_modules(path: PathBuf) -> Vec<String> {
-    let mut modules : Vec<String> = path.read_dir()
+pub fn list_modules(path: PathBuf) -> Vec<(String,DirEntry)> {
+    let mut modules : Vec<(String,DirEntry)> = path.read_dir()
             .unwrap()
             .filter_map(|v| {
-                v.ok().and_then(|p| -> Option<String> {
+                v.ok().and_then(|p| -> Option<(String,DirEntry)> {
                     let name = p.file_name();
-                    name.into_string().ok()
+                    name.into_string().ok().and_then(|v| Some((v,p)))
                 })
             })
-            .filter(|p| p.ends_with(".json"))
-            .map(|p| p.strip_suffix(".json").unwrap().to_string())
+            .filter(|p| p.0.ends_with(".json"))
+            .map(|p| (p.0.strip_suffix(".json").unwrap().to_string(),p.1))
             .collect();
 
-    modules.sort();
+    modules.sort_by(|a,b| a.0.cmp(&b.0));
     modules
 }

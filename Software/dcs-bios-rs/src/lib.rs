@@ -1,6 +1,6 @@
 #![no_std]
 
-use core::{marker::PhantomData, str};
+use core::{marker::PhantomData, ops::{Range, RangeInclusive}, str, u16};
 
 use error::Error;
 use mem::MemoryMap;
@@ -13,9 +13,9 @@ pub mod source;
 pub trait DcsBios<M: MemoryMap> {
     fn get_self_integer(&self, address: u16, mask: u16, shift_by: u16) -> Option<u16>;
     fn get_self_string(&self, address: u16, length: u16) -> Option<&str>;
-    fn read<'a, F: Fn(u16, &'a M)>(
+    fn read<'a, F: Fn(RangeInclusive<u16>, &'a M)>(
         &'a mut self,
-        listener: &[Listener<'a, M, F>],
+        listener: &Listener<'a, M, F>,
     ) -> Result<(), Error>;
 
     fn get_integer(memory_map: &M, address: u16, mask: u16, shift_by: u16) -> Option<u16> {
@@ -29,9 +29,9 @@ pub trait DcsBios<M: MemoryMap> {
     }
 }
 
-pub struct Listener<'a, M: MemoryMap + 'a, F: Fn(u16, &'a M)> {
+pub struct Listener<'a, M: MemoryMap + 'a, F: Fn(RangeInclusive<u16>, &'a M)> {
     pub _phantom: PhantomData<&'a M>,
-    pub address: u16,
+    pub address: RangeInclusive<u16>,
     pub func: F,
 }
 
@@ -55,10 +55,10 @@ impl<S: Source, M: MemoryMap> DcsBios<M> for DcsBiosImpl<S, M> {
         DcsBiosImpl::<S, M>::get_string(&self.memory_map, address, length)
     }
 
-    fn read<'a, F: Fn(u16, &'a M)>(
+    fn read<'a, F: Fn(RangeInclusive<u16>, &'a M)>(
         &'a mut self,
-        listener: &[Listener<'a, M, F>],
-    ) -> Result<(), Error> {
+        listener: &Listener<'a, M, F>,
+        ) -> Result<(), Error> {
         let bytes = self.source.read()?;
         if bytes.is_none() {
             return Ok(());
@@ -77,10 +77,9 @@ impl<S: Source, M: MemoryMap> DcsBios<M> for DcsBiosImpl<S, M> {
             let address = ele.address;
             let length = ele.length;
             let range = address..=(address + (length - 1));
-            for ele in listener {
-                if range.contains(&ele.address) {
-                    (ele.func)(ele.address, &self.memory_map);
-                }
+
+            if (listener.address.start() <=range.start() && range.end() <= listener.address.end()){
+                (listener.func)(range,&self.memory_map);
             }
         }
         Ok(())

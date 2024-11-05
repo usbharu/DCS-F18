@@ -11,3 +11,4 @@ members = [ "dcs-bios-cli", "dcs-bios-const","dcs-bios-rs","dcs-bios-viewer/src-
 [workspace.dependencies]
 heapless = "0.8.0"
 dcs-bios = {path = "dcs-bios-rs"}
+dcs-bios-const = {path = "dcs-bios-const"}
