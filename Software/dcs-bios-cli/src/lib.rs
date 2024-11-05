@@ -1,32 +1,42 @@
 pub mod filter;
 
 use std::{
-    fs::DirEntry, io::{Error, ErrorKind}, net::{Ipv4Addr, UdpSocket}, ops::RangeInclusive, path::PathBuf
+    collections::HashSet,
+    fs::DirEntry,
+    io::{Error, ErrorKind},
+    net::{Ipv4Addr, UdpSocket},
+    ops::RangeInclusive,
+    path::PathBuf,
 };
 
 use dcs_bios::{mem::MemoryMap, source::Source, DcsBios, DcsBiosImpl, Listener};
+use filter::Filter;
 
-pub fn main_loop(source: UdpSource) {
+pub fn main_loop(source: UdpSource, filters: HashSet<Filter>) {
     let mut dcs_bios = DcsBiosImpl::new(source, VecMemoryMap::new([0; 65536].to_vec()));
 
     // let listener = ;
 
     type Func = fn(RangeInclusive<u16>, &VecMemoryMap) -> ();
-    let f4: Func = |v, m| {
-        let data = DcsBiosImpl::<UdpSource, VecMemoryMap>::get_string(m, 0x7490, 6);
-        println!("{:?}: {:?}", v, data);
-    };
-    let listener =
-        Listener {
+    //    let listener = ;
+    loop {
+        match dcs_bios.read(&Listener {
             _phantom: std::marker::PhantomData,
             address: 0..=65535,
-            func: f4,
-        };
-    loop {
-        match dcs_bios.read(&listener) {
+            func: |v, m| {
+                for filter in &filters {
+                    if filter.contains(&v) {
+                        match filter {
+                            Filter::IdFilter { id, addresses } => {}
+                            Filter::AddressFilter { address } => {}
+                        }
+                    }
+                }
+            },
+        }) {
             Ok(_) => {}
             Err(e) => {
-//                println!("Error: {:?}", e);
+                //                println!("Error: {:?}", e);
             }
         }
     }
@@ -65,7 +75,7 @@ impl Source for UdpSource {
             .recv_from(&mut self.buf)
             .map_err(|e| {
                 if e.kind() != ErrorKind::TimedOut {
-                    println!("{:?}",e.kind());
+                    println!("{:?}", e.kind());
                 }
                 dcs_bios::error::Error::SourceError()
             })?
@@ -103,19 +113,20 @@ impl MemoryMap for VecMemoryMap {
     }
 }
 
-pub fn list_modules(path: PathBuf) -> Vec<(String,DirEntry)> {
-    let mut modules : Vec<(String,DirEntry)> = path.read_dir()
-            .unwrap()
-            .filter_map(|v| {
-                v.ok().and_then(|p| -> Option<(String,DirEntry)> {
-                    let name = p.file_name();
-                    name.into_string().ok().and_then(|v| Some((v,p)))
-                })
+pub fn list_modules(path: PathBuf) -> Vec<(String, DirEntry)> {
+    let mut modules: Vec<(String, DirEntry)> = path
+        .read_dir()
+        .unwrap()
+        .filter_map(|v| {
+            v.ok().and_then(|p| -> Option<(String, DirEntry)> {
+                let name = p.file_name();
+                name.into_string().ok().and_then(|v| Some((v, p)))
             })
-            .filter(|p| p.0.ends_with(".json"))
-            .map(|p| (p.0.strip_suffix(".json").unwrap().to_string(),p.1))
-            .collect();
+        })
+        .filter(|p| p.0.ends_with(".json"))
+        .map(|p| (p.0.strip_suffix(".json").unwrap().to_string(), p.1))
+        .collect();
 
-    modules.sort_by(|a,b| a.0.cmp(&b.0));
+    modules.sort_by(|a, b| a.0.cmp(&b.0));
     modules
 }

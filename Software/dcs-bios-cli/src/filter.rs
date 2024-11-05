@@ -1,5 +1,5 @@
 use dcs_bios_const::json_type::Function;
-use std::{collections::HashSet, u16, vec};
+use std::{collections::HashSet, ops::{RangeBounds, RangeInclusive}, u16, vec};
 
 #[derive(Debug, PartialEq, Eq,Hash)]
 pub enum Filter {
@@ -7,11 +7,18 @@ pub enum Filter {
     AddressFilter { address: u16 },
 }
 
+pub struct Metric{
+    module:String,
+    
+}
+
 impl Filter {
-    fn contains(&self, addr: u16) -> bool {
+    pub fn contains(&self, addr: &RangeInclusive<u16>) -> bool {
         match &self {
-            Filter::IdFilter { id, addresses } => addresses.contains(&addr),
-            Filter::AddressFilter { address } => *address == addr,
+            Filter::IdFilter { id, addresses } => {
+                addresses.iter().any(|f| addr.contains(f))
+            },
+            Filter::AddressFilter { address } => addr.contains(address),
         }
     }
 }
