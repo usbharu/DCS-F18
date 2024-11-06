@@ -1,0 +1,51 @@
+
+div > label,input {
+	display: block;
+  width: 100%;
+}
+
+#connect-form {
+	display: flex;
+	flex-wrap: wrap;
+	flex-direction: column;
+	align-content: center;
+	justify-content: center;
+	align-items: stretch;
+}
+
+form>div > div {
+	margin-top: 16px;
+  width: 80%;
+}
+
+input {
+  padding: 6px;
+  border-radius: 12px;
+  border-color: skyblue;
+  font-size: 1.4em;
+}
+
+.connect-form-submit {
+	margin-left: auto;
+	box-sizing: border-box;
+	width: 50%;
+}
+
+.connect-form-submit {
+  background-color: skyblue;
+}
+
+.select-metrics-select {
+  display: inline;
+ 
+}
+
+.select-metrics-select > select {
+  min-width: 150px;
+}
+
+.select-metrics-select > label {
+  width: auto;
+  display: inline;
+  min-width: 100px;
+}

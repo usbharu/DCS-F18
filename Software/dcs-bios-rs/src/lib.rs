@@ -1,6 +1,10 @@
 #![no_std]
 
-use core::{marker::PhantomData, ops::{Range, RangeInclusive}, str, u16};
+use core::{
+    marker::PhantomData,
+    ops::{Range, RangeInclusive},
+    str, u16,
+};
 
 use error::Error;
 use mem::MemoryMap;
@@ -58,7 +62,7 @@ impl<S: Source, M: MemoryMap> DcsBios<M> for DcsBiosImpl<S, M> {
     fn read<'a, F: Fn(RangeInclusive<u16>, &'a M)>(
         &'a mut self,
         listener: &Listener<'a, M, F>,
-        ) -> Result<(), Error> {
+    ) -> Result<(), Error> {
         let bytes = self.source.read()?;
         if bytes.is_none() {
             return Ok(());
@@ -78,8 +82,9 @@ impl<S: Source, M: MemoryMap> DcsBios<M> for DcsBiosImpl<S, M> {
             let length = ele.length;
             let range = address..=(address + (length - 1));
 
-            if (listener.address.start() <=range.start() && range.end() <= listener.address.end()){
-                (listener.func)(range,&self.memory_map);
+            if (listener.address.start() <= range.start() && range.end() <= listener.address.end())
+            {
+                (listener.func)(range, &self.memory_map);
             }
         }
         Ok(())
