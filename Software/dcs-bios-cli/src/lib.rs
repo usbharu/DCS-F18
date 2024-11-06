@@ -31,7 +31,7 @@ pub fn main_loop(source: UdpSource, filters: HashSet<Filter>) {
                             Filter::AddressFilter { address } => {}
                         }
                     }
-                }
+                };
             },
         }) {
             Ok(_) => {}
