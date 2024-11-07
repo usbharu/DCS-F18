@@ -49,11 +49,10 @@ export const Connect = () => {
 							onChange={(e) => setInterfaces(e.currentTarget.value)}
 						/>
 					</div>
-                    <div className="connect-form-input">
-                        <div />
-                    <input className="connect-form-submit" type="submit" value="接続"/>
-                    </div>
-					
+					<div className="connect-form-input">
+						<div />
+						<input className="connect-form-submit" type="submit" value="接続" />
+					</div>
 				</div>
 			</form>
 		</div>
