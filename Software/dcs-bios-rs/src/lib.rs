@@ -22,6 +22,8 @@ pub trait DcsBios<M: MemoryMap> {
         listener: &Listener<'a, M, F>,
     ) -> Result<(), Error>;
 
+    fn read_packet(&mut self) -> Result<DcsBiosPacket,Error>;
+
     fn get_integer(memory_map: &M, address: u16, mask: u16, shift_by: u16) -> Option<u16> {
         let d = memory_map.read(address..=(address + 1))?;
         Some((u16::from_le_bytes([d[0], d[1]]) & mask) >> shift_by)
@@ -89,9 +91,19 @@ impl<S: Source, M: MemoryMap> DcsBios<M> for DcsBiosImpl<S, M> {
         }
         Ok(())
     }
+
+    fn read_packet(&mut self) -> Result<DcsBiosPacket,Error> {
+        let bytes = self.source.read()?;
+        if bytes.is_none() {
+            return Ok(DcsBiosPacket::default());
+        };
+        let bytes = bytes.unwrap();
+        return Ok(DcsBiosPacket::new(bytes));
+    }
 }
 
-struct DcsBiosPacket<'a> {
+#[derive(Debug,Clone, Copy)]
+pub struct DcsBiosPacket<'a> {
     data: &'a [u8],
     next_offset: usize,
 }
@@ -105,11 +117,21 @@ impl<'a> DcsBiosPacket<'a> {
     }
 }
 
+impl Default for DcsBiosPacket<'_> {
+    fn default() -> Self {
+        DcsBiosPacket{
+            data: &[0; 0],
+            next_offset: 0
+        }
+    }
+}
+
+
 #[derive(Debug)]
-struct Receive<'a> {
-    address: u16,
-    length: u16,
-    data: &'a [u8],
+pub struct Receive<'a> {
+    pub address: u16,
+    pub length: u16,
+    pub data: &'a [u8],
 }
 
 impl<'a> Iterator for DcsBiosPacket<'a> {

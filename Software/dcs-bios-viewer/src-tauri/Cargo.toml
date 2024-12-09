@@ -26,3 +26,4 @@ dcs-bios-const.workspace = true
 dcs-bios.workspace = true
 tokio = { version = "1.41.0", features = ["time"] }
 
+tokio-stream = "0.1"

@@ -1,4 +1,4 @@
-use std::io::Error;
+use std::io::{Error, ErrorKind};
 use std::net::{Ipv4Addr, UdpSocket};
 
 pub trait Source {
@@ -9,6 +9,26 @@ pub trait Source {
 pub struct UdpSource {
     udp_socket: UdpSocket,
     buf: [u8; 1500],
+}
+
+impl dcs_bios::source::Source for UdpSource{
+    fn setup(&self) -> Result<(),dcs_bios::error::Error> {
+        Ok(())
+    }
+
+    fn read(&mut self) -> Result<Option<&[u8]>,dcs_bios::error::Error> {
+        let a = 0..(self
+            .udp_socket
+            .recv_from(&mut self.buf)
+            .map_err(|e| {
+                if e.kind() != ErrorKind::TimedOut {
+                    println!("{:?}", e.kind());
+                }
+                dcs_bios::error::Error::SourceError()
+            })?
+            .0);
+        Ok(Some(&self.buf[a]))
+    }
 }
 
 impl Source for UdpSource {
