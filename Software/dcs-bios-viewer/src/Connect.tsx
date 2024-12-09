@@ -6,6 +6,7 @@ export const Connect = () => {
 	const [bind, setBind] = useState<string>();
 	const [address, setAddress] = useState<string>();
 	const [interfaces, setInterfaces] = useState<string>();
+	const [errorMessage, setErrorMessage] = useState("");
 
 	const navigate = useNavigate();
 
@@ -16,7 +17,7 @@ export const Connect = () => {
 			interface: interfaces,
 		})
 			.then(() => navigate("/view"))
-			.catch((e) => console.error(e));
+			.catch((e) => { console.error(e); setErrorMessage(e) });
 	}
 
 	return (
@@ -53,6 +54,7 @@ export const Connect = () => {
 						<div />
 						<input className="connect-form-submit" type="submit" value="接続" />
 					</div>
+					<p>{errorMessage}</p>
 				</div>
 			</form>
 		</div>

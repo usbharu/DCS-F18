@@ -11,7 +11,7 @@ export const MetricsView = () => {
 	const [selectedId, setSelectedId] = useState<string>();
 
 	useEffect(() => {
-		invoke("categories", { module: selectedModule })
+		invoke("categories", { moduleName: selectedModule })
 			.then((e) => {
 				setCategories(e);
 			})
@@ -21,7 +21,7 @@ export const MetricsView = () => {
 	}, [selectedModule]);
 
 	useEffect(() => {
-		invoke("ids", { module: selectedModule, category: selectedCategory })
+		invoke("ids", { moduleName: selectedModule, categoryName: selectedCategory })
 			.then((e) => {
 				setIds(e);
 			})
@@ -92,7 +92,7 @@ export const MetricsView = () => {
 					</div>
 					<div className="select-metrics-select">
 						<label htmlFor="select-metrics-category-select">Category</label>
-						<select id="select-metrics-category-select">
+						<select id="select-metrics-category-select" onChange={(e) => setSelectedCategory(e.currentTarget.value)}>
 							{categories?.map((v) => (
 								<option key={v}>{v}</option>
 							))}
@@ -100,7 +100,7 @@ export const MetricsView = () => {
 					</div>
 					<div className="select-metrics-select">
 						<label htmlFor="select-metrics-id-select">ID</label>
-						<select id="select-metrics-id-select">
+						<select id="select-metrics-id-select" onChange={(e) => setSelectedId(e.currentTarget.value)}>
 							{ids?.map((v) => (
 								<option key={v}>{v}</option>
 							))}
