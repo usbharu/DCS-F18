@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
+import { Metrics, type Function } from "./Metrics";
 
 export const MetricsView = () => {
 	const [modules, setModules] = useState<string[]>([]);
@@ -10,7 +11,11 @@ export const MetricsView = () => {
 	const [selectedCategory, setSelectedCategory] = useState<string>();
 	const [selectedId, setSelectedId] = useState<string>();
 
+	const [views, setViews] = useState<Function[]>([]);
+
 	useEffect(() => {
+		console.log("aaaaaaaa");
+
 		invoke("categories", { moduleName: selectedModule })
 			.then((e) => {
 				setCategories(e);
@@ -21,7 +26,10 @@ export const MetricsView = () => {
 	}, [selectedModule]);
 
 	useEffect(() => {
-		invoke("ids", { moduleName: selectedModule, categoryName: selectedCategory })
+		invoke("ids", {
+			moduleName: selectedModule,
+			categoryName: selectedCategory,
+		})
 			.then((e) => {
 				setIds(e);
 			})
@@ -59,8 +67,8 @@ export const MetricsView = () => {
 	}, [ids]);
 
 	function onSubmit() {
-		invoke("subscribe", { module: selectedModule, id: selectedId })
-			.then((e) => console.log(e))
+		invoke("subscribe", { moduleName: selectedModule, id: selectedId })
+			.then((e) => invoke("get_subscribed").then((v) => setViews(v as Function[])))
 			.catch((e) => console.error(e));
 	}
 
@@ -77,7 +85,7 @@ export const MetricsView = () => {
 						<label htmlFor="select-metrics-module-select">Module</label>
 						<select
 							id="select-metrics-module-select"
-							onSelect={(e) => setSelectedModule(e.currentTarget.value)}
+							onChange={(e) => setSelectedModule(e.currentTarget.value)}
 						>
 							{modules?.map((v) =>
 								v === selectedModule ? (
@@ -92,7 +100,10 @@ export const MetricsView = () => {
 					</div>
 					<div className="select-metrics-select">
 						<label htmlFor="select-metrics-category-select">Category</label>
-						<select id="select-metrics-category-select" onChange={(e) => setSelectedCategory(e.currentTarget.value)}>
+						<select
+							id="select-metrics-category-select"
+							onChange={(e) => setSelectedCategory(e.currentTarget.value)}
+						>
 							{categories?.map((v) => (
 								<option key={v}>{v}</option>
 							))}
@@ -100,7 +111,10 @@ export const MetricsView = () => {
 					</div>
 					<div className="select-metrics-select">
 						<label htmlFor="select-metrics-id-select">ID</label>
-						<select id="select-metrics-id-select" onChange={(e) => setSelectedId(e.currentTarget.value)}>
+						<select
+							id="select-metrics-id-select"
+							onChange={(e) => setSelectedId(e.currentTarget.value)}
+						>
 							{ids?.map((v) => (
 								<option key={v}>{v}</option>
 							))}
@@ -111,6 +125,17 @@ export const MetricsView = () => {
 					</div>
 				</div>
 			</form>
+			<div>
+				{views.map((value) => (
+					<Metrics
+						key={value.identifier}
+						fun={value}
+						OnRemove={(v) =>
+							invoke("get_subscribed").then((v) => setViews(v as Function[]))
+						}
+					/>
+				))}
+			</div>
 		</div>
 	);
 };

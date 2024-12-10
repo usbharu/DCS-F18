@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use source::{Source, UdpSource};
 use std::{
     collections::HashMap, env, net::Ipv4Addr, ops::RangeInclusive, path::PathBuf, str::FromStr,
-    sync::Arc,
+    sync::{Arc, Mutex},
 };
 use tauri::{App, Emitter, Manager, State};
 mod modules;
@@ -32,6 +32,50 @@ pub struct SourceConfig {
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Listening {
     pub ids: Arc<std::sync::Mutex<Vec<Function>>>,
+}
+
+
+#[tauri::command(async)]
+async fn subscribe(
+    listening: State<'_, Listening>,
+    modules: State<'_, Modules>,
+    module_name: &str,
+    id: &str,
+) -> Result<(), String> {
+    let mut guard = listening.ids.lock().unwrap();
+    if guard.iter().find(|p| p.identifier == id).is_some() {
+        return Ok(());
+    };
+    let mut modules = modules.modules.lock().map_err(|e| e.to_string())?;
+    let module = modules
+        .iter_mut()
+        .find(|p| p.0 == module_name)
+        .ok_or("".to_string())?
+        .1;
+    if module.is_none() {
+        let _ = module.get_func();
+    };
+
+    match &module.func {
+        Some(v) => {
+            let func = v
+                .iter()
+                .find(|p| p.0 == id)
+                .ok_or("".to_string())?
+                .1
+                .clone();
+            guard.push(func);
+        }
+
+        None => {}
+    };
+    Ok(())
+}
+
+#[tauri::command]
+fn get_subscribed(listening: State<'_, Listening>) -> Vec<Function> {
+    let guard = listening.ids.lock().unwrap();
+    guard.clone()
 }
 
 #[tauri::command(async)]
@@ -69,17 +113,17 @@ fn connect(
     listening: State<'_, Listening>,
     app_handle: tauri::AppHandle,
     bind: &str,
-    addr: &str,
+    address: &str,
     interface: &str,
 ) -> Result<(), String> {
-    println!("bind: {} addr: {} interface: {}", bind, addr, interface);
+    println!("bind: {} addr: {} interface: {}", bind, address, interface);
 
     *(source.addr.lock().unwrap()) = Some(bind.to_string());
 
     let source_c = bind.to_string();
     let udp_source = UdpSource::from_addr(
         bind,
-        &Ipv4Addr::from_str(addr).map_err(|_| "Addressが不正です".to_string())?,
+        &Ipv4Addr::from_str(address).map_err(|_| "Addressが不正です".to_string())?,
         &Ipv4Addr::from_str(interface).map_err(|_| "Interfaceが不正です".to_string())?,
     )
     .map_err(|e| e.to_string())?;
@@ -263,16 +307,33 @@ fn setup_modules(app: &mut App) {
     });
 }
 
+
+#[tauri::command]
+fn unsubscribe(listening: State<'_, Listening>, id: &str) -> () {
+    let mut listening = listening.ids.lock().unwrap();
+
+    if let Some(index) = listening.iter().position(|p| p.identifier == id) {
+        listening.remove(index);
+    };
+}
+
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
+            app.manage(SourceConfig {
+                addr: Arc::new(Mutex::new(None)),
+            });
+            app.manage(Listening {
+                ids: Arc::new(Mutex::new(vec![])),
+            });
             setup_modules(app);
             Ok(())
         })
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
-            greet, modules, categories, ids, connect
+            greet, modules, categories, ids, connect,subscribe,get_subscribed,unsubscribe
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
