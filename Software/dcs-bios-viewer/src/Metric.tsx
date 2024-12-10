@@ -5,9 +5,6 @@ import { listen } from "@tauri-apps/api/event";
 export const Metric: React.FC<{ output: Output }> = ({ output }) => {
 	const [data, setData] = useState<number | string>();
 
-	const mask = !!output.mask ? output.mask : 65535;
-	const shift = !!output.shift_by ? output.shift_by : 0;
-
 	function value(data: string | number | undefined): string | number {
 		if (output.type === "string") {
 			if (data === undefined) {
@@ -18,15 +15,30 @@ export const Metric: React.FC<{ output: Output }> = ({ output }) => {
 		if (data === undefined) {
 			return 0;
 		}
-		return ((data as number) & mask) >> shift;
+		return data;
 	}
 
 	useEffect(() => {
 		const unlisten = listen("data", (d) => {
-			const dat = d.payload as Data[];
-			const b: Data | undefined = dat.find((p) => p.address === output.address);
+			const dat = d.payload as Data[][];
+      
+			const b: Data[] | undefined = dat.find((p) => {
+        
+				if (output.type === "string") {
+					return p.StringData.id === `${output.address}_string_${output.max_length}`;
+				}
+				return (
+					p.IntegerData.id === `${output.address}_integer_${output.mask}_${output.shift_by}`
+				);
+			});
+      
 			if (b !== undefined) {
-				setData(b.value);
+        if (output.type === "string") {
+          setData(b.StringData.value);
+        }else {
+          setData(b.IntegerData.value);
+        }
+				
 			}
 		});
 
@@ -37,7 +49,7 @@ export const Metric: React.FC<{ output: Output }> = ({ output }) => {
 				})
 				.catch((e) => console.error(e));
 		};
-	}, [output.address]);
+	});
 
 	return (
 		<span title={output.description}>

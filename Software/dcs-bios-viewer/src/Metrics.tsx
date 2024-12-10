@@ -9,6 +9,7 @@ export type Output = {
 	shift_by?: number;
 	suffix: string;
 	type: string;
+  max_length?: number;
 };
 
 export type Function = {
@@ -22,6 +23,7 @@ export type Function = {
 };
 
 export type Data = {
+  id: string,
 	address: number;
 	value: number | string;
 };

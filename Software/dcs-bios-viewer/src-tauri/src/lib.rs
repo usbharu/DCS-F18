@@ -4,9 +4,15 @@ use dcs_bios_const::json_type::{Function, Output, Type};
 use modules::{Module, Modules};
 use serde::{Deserialize, Serialize};
 use source::{Source, UdpSource};
+use tokio::time;
 use std::{
-    collections::HashMap, env, net::Ipv4Addr, ops::RangeInclusive, path::PathBuf, str::FromStr,
-    sync::{Arc, Mutex},
+    collections::HashMap,
+    env,
+    net::Ipv4Addr,
+    ops::RangeInclusive,
+    path::PathBuf,
+    str::FromStr,
+    sync::{Arc, Mutex}, time::Duration,
 };
 use tauri::{App, Emitter, Manager, State};
 mod modules;
@@ -33,7 +39,6 @@ pub struct SourceConfig {
 pub struct Listening {
     pub ids: Arc<std::sync::Mutex<Vec<Function>>>,
 }
-
 
 #[tauri::command(async)]
 async fn subscribe(
@@ -94,15 +99,30 @@ async fn categories(modules: State<'_, Modules>, module_name: &str) -> Result<Ve
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub enum Data {
-    IntegerData { address: u16, value: u16 },
-    StringData { address: u16, value: String },
+    IntegerData {
+        id: String,
+        address: u16,
+        value: u16,
+    },
+    StringData {
+        id: String,
+        address: u16,
+        value: String,
+    },
 }
 
 impl Data {
     pub fn address(&self) -> u16 {
         match self {
-            Data::IntegerData { address, value: _ } => *address,
-            Data::StringData { address, value: _ } => *address,
+            Data::IntegerData { id: _,address, value: _ } => *address,
+            Data::StringData { id:_, address, value: _ } => *address,
+        }
+    }
+
+    pub fn id(&self) -> &String {
+        match self {
+            Data::IntegerData { id,address:_, value: _ } => id,
+            Data::StringData { id, address:_, value: _ } => id,
         }
     }
 }
@@ -138,7 +158,7 @@ fn connect(
         async move {
             let mut counter: u16 = 0;
 
-            let mut list: HashMap<u16, Output> = HashMap::new();
+            let mut list: Vec< Output> = vec![];
 
             loop {
                 if counter % 1000 == 0 {
@@ -152,10 +172,10 @@ fn connect(
                         .flat_map(|x| {
                             x.outputs
                                 .iter()
-                                .map(|f| (f.address, f.clone()))
-                                .collect::<HashMap<u16, Output>>()
+                                .map(|f| f.clone())
+                                .collect::<Vec<Output>>()
                         })
-                        .collect::<HashMap<u16, Output>>();
+                        .collect::<Vec<Output>>();
                     if source_c != *a {
                         println!("break!");
                         break;
@@ -166,7 +186,7 @@ fn connect(
                 let packets = {
                     let dcs_bios = &mut dcs_bios;
                     let Ok(packets) = dcs_bios.read_packet() else {
-                        //         time::sleep(Duration::from_micros(100)).await;
+                                time::sleep(Duration::from_micros(100)).await;
                         continue;
                     };
                     packets
@@ -178,8 +198,8 @@ fn connect(
                     vec.append(
                         &mut list
                             .iter()
-                            .filter_map(move |(p, o)| {
-                                if (ele.address..=(ele.address + ele.length)).contains(p) {
+                            .filter_map(move | o| {
+                                if (ele.address..=(ele.address + (ele.length - 1))).contains(&o.address) {
                                     return Some(o);
                                 } else {
                                     return None;
@@ -194,6 +214,7 @@ fn connect(
                 for it in vec {
                     vec2.push(match it.r#type {
                         Type::integer => Data::IntegerData {
+                            id: format!("{}_{}_{}_{}",it.address,it.r#type,it.mask.unwrap(),it.shift_by.unwrap()),
                             address: it.address,
                             value: dcs_bios
                                 .get_self_integer(
@@ -204,6 +225,7 @@ fn connect(
                                 .unwrap(),
                         },
                         Type::string => Data::StringData {
+                            id: format!("{}_{}_{}",it.address,it.r#type,it.max_length.unwrap()),
                             address: it.address,
                             value: dcs_bios
                                 .get_self_string(it.address, it.max_length.unwrap())
@@ -217,8 +239,8 @@ fn connect(
                     continue;
                 }
 
-                vec2.sort_by_key(|f| f.address());
-                vec2.dedup_by_key(|f| f.address());
+                vec2.sort_by(|a,b| a.id().cmp(b.id()));
+                vec2.dedup_by(|a,b| a.id() == b.id() );
                 println!("{:?}", vec2);
                 app_handle.emit("data", vec2).unwrap();
             }
@@ -307,7 +329,6 @@ fn setup_modules(app: &mut App) {
     });
 }
 
-
 #[tauri::command]
 fn unsubscribe(listening: State<'_, Listening>, id: &str) -> () {
     let mut listening = listening.ids.lock().unwrap();
@@ -316,7 +337,6 @@ fn unsubscribe(listening: State<'_, Listening>, id: &str) -> () {
         listening.remove(index);
     };
 }
-
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -333,7 +353,14 @@ pub fn run() {
         })
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
-            greet, modules, categories, ids, connect,subscribe,get_subscribed,unsubscribe
+            greet,
+            modules,
+            categories,
+            ids,
+            connect,
+            subscribe,
+            get_subscribed,
+            unsubscribe
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

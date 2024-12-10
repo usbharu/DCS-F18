@@ -98,6 +98,14 @@ impl<S: Source, M: MemoryMap> DcsBios<M> for DcsBiosImpl<S, M> {
             return Ok(DcsBiosPacket::default());
         };
         let bytes = bytes.unwrap();
+        let packet = DcsBiosPacket::new(bytes);
+        for ele in packet {
+            let address = ele.address;
+            {
+                let mem: &mut M = &mut self.memory_map;
+                mem.write(address, ele.data)?;
+            };
+        }
         return Ok(DcsBiosPacket::new(bytes));
     }
 }

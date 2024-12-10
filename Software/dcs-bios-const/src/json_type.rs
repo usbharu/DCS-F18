@@ -1,3 +1,5 @@
+use core::fmt;
+
 use serde::{Deserialize, Serialize};
 
 #[allow(non_camel_case_types)]
@@ -5,6 +7,15 @@ use serde::{Deserialize, Serialize};
 pub enum Type {
     integer,
     string,
+}
+
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Type::integer => write!(f,"integer"),
+            Type::string => write!(f,"string"),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

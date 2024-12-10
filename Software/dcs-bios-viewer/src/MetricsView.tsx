@@ -14,7 +14,6 @@ export const MetricsView = () => {
 	const [views, setViews] = useState<Function[]>([]);
 
 	useEffect(() => {
-		console.log("aaaaaaaa");
 
 		invoke("categories", { moduleName: selectedModule })
 			.then((e) => {
