@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 
 [workspace]
-members = [ "dcs-bios-cli", "dcs-bios-const","dcs-bios-rs","dcs-bios-viewer/src-tauri"]
+members = [ "dcs-bios-cli", "dcs-bios-const","dcs-bios-rs","dcs-bios-viewer/src-tauri","dcs-f18-ddi"]
 
 [workspace.dependencies]
 heapless = "0.8.0"
