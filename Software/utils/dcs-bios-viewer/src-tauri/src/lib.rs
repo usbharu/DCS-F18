@@ -48,7 +48,7 @@ async fn subscribe(
     id: &str,
 ) -> Result<(), String> {
     let mut guard = listening.ids.lock().unwrap();
-    if guard.iter().find(|p| p.identifier == id).is_some() {
+    if guard.iter().any(|p| p.identifier == id) {
         return Ok(());
     };
     let mut modules = modules.modules.lock().map_err(|e| e.to_string())?;
@@ -170,10 +170,7 @@ fn connect(
                         .unwrap()
                         .iter()
                         .flat_map(|x| {
-                            x.outputs
-                                .iter()
-                                .map(|f| f.clone())
-                                .collect::<Vec<Output>>()
+                            x.outputs.to_vec()
                         })
                         .collect::<Vec<Output>>();
                     if source_c != *a {
@@ -200,9 +197,9 @@ fn connect(
                             .iter()
                             .filter_map(move | o| {
                                 if (ele.address..=(ele.address + (ele.length - 1))).contains(&o.address) {
-                                    return Some(o);
+                                    Some(o)
                                 } else {
-                                    return None;
+                                    None
                                 }
                             })
                             .collect::<Vec<&Output>>(),
@@ -330,7 +327,7 @@ fn setup_modules(app: &mut App) {
 }
 
 #[tauri::command]
-fn unsubscribe(listening: State<'_, Listening>, id: &str) -> () {
+fn unsubscribe(listening: State<'_, Listening>, id: &str) {
     let mut listening = listening.ids.lock().unwrap();
 
     if let Some(index) = listening.iter().position(|p| p.identifier == id) {
