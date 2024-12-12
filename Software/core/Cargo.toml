@@ -1,0 +1,12 @@
+[package]
+name = "dcs-bios-core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+[workspace]
+members = ["dcs-bios-rs"]
+
+[workspace.dependencies]
+heapless = "0.8.0"

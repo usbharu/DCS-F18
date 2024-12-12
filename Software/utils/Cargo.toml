@@ -1,0 +1,14 @@
+[package]
+name = "dcs-f18-utils"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+[workspace]
+members = ["dcs-bios-cli", "dcs-bios-const", "dcs-bios-viewer/src-tauri/"]
+
+[workspace.dependencies]
+heapless = "0.8.0"
+dcs-bios = {path = "../core/dcs-bios-rs"}
+dcs-bios-const = {path = "dcs-bios-const"}

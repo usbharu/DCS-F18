@@ -1,0 +1,13 @@
+[package]
+name = "dcs-f18-firmware"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+[workspace]
+members = ["dcs-f18-ddi"]
+
+[lib]
+test = false
+bench = false
