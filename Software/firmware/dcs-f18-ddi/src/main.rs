@@ -30,5 +30,8 @@ async fn main(_spawner: Spawner) {
 
     use embassy_rp::i2c::{Async, Config, I2c};
     let i2c: I2c<'_, I2C1, Async> = I2c::new_async(i2c_contr, scl, sda, Irqs, Config::default());
-    let new_default = Mcp230xx::<I2c<'_, I2C1, Async>, Mcp23017>::new_default(i2c);
+
+    
+
+    let new_default: Result<Mcp230xx<I2c<'_, I2C1, Async>, Mcp23017>, Error<embassy_rp::i2c::Error>> = Mcp230xx::<I2c<'_, I2C1, Async>, Mcp23017>::new_default(i2c);
 }
