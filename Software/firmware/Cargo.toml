@@ -9,6 +9,10 @@ edition = "2021"
 members = ["dcs-f18-ddi"]
 
 [workspace.dependencies]
+
+dcs-f18-ddi.path = "dcs-f18-ddi"
+
+
 cortex-m = "0.7.6"
 cortex-m-rt = "0.7"
 embedded-hal-async = "1.0"
