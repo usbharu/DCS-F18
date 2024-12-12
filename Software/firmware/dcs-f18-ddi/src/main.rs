@@ -6,12 +6,10 @@
 #![no_std]
 #![no_main]
 #![allow(async_fn_in_trait)]
+extern crate embassy_rp;
 
 use embassy_executor::Spawner;
-use embassy_rp;
 use embassy_rp::bind_interrupts;
-use embassy_rp::gpio::Level;
-use embassy_rp::gpio::Output;
 use embassy_rp::i2c::InterruptHandler;
 use embassy_rp::peripherals::*;
 
@@ -23,20 +21,14 @@ bind_interrupts!(struct Irqs {
 
 });
 #[embassy_executor::main]
-async fn main(spawner: Spawner) {
+async fn main(_spawner: Spawner) {
     let p: embassy_rp::Peripherals = embassy_rp::init(Default::default());
-    let led: Output<'_> = Output::new(p.PIN_25, Level::Low);
     // I2C
     let i2c_contr = p.I2C1;
     let scl = p.PIN_3;
     let sda = p.PIN_2;
-    let hz = 75;
 
-    use embassy_rp::i2c::{self, Config};
-    let i2c: i2c::I2c<'_, I2C1, i2c::Async> =
-        i2c::I2c::new_async(i2c_contr, scl, sda, Irqs, Config::default());
-    Mcp230xx::<
-        embassy_rp::i2c::I2c<'_, embassy_rp::peripherals::I2C1, embassy_rp::i2c::Async>,
-        Mcp23017,
-    >::new_default(i2c);
+    use embassy_rp::i2c::{Async, Config, I2c};
+    let i2c: I2c<'_, I2C1, Async> = I2c::new_async(i2c_contr, scl, sda, Irqs, Config::default());
+    let new_default = Mcp230xx::<I2c<'_, I2C1, Async>, Mcp23017>::new_default(i2c);
 }

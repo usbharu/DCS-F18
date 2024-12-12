@@ -1,5 +1,5 @@
 use dcs_bios_const::json_type::Function;
-use std::{collections::HashSet, ops::{RangeBounds, RangeInclusive}, u16, vec};
+use std::{collections::HashSet, ops::RangeInclusive};
 
 #[derive(Debug, PartialEq, Eq,Hash)]
 pub enum Filter {

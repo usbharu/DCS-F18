@@ -2,8 +2,7 @@
 
 use core::{
     marker::PhantomData,
-    ops::{Range, RangeInclusive},
-    str, u16,
+    ops::RangeInclusive, str,
 };
 
 use error::Error;
@@ -84,7 +83,7 @@ impl<S: Source, M: MemoryMap> DcsBios<M> for DcsBiosImpl<S, M> {
             let length = ele.length;
             let range = address..=(address + (length - 1));
 
-            if (listener.address.start() <= range.start() && range.end() <= listener.address.end())
+            if listener.address.start() <= range.start() && range.end() <= listener.address.end()
             {
                 (listener.func)(range, &self.memory_map);
             }

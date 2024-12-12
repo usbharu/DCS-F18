@@ -4,10 +4,7 @@
         "Software/core/Cargo.toml",
         "Software/firmware/Cargo.toml"
     ],
-    
-    "cSpell.words": [
-        "heapless"
-    ],
+    "rust-analyzer.check.allTargets": false,
     "editor.defaultFormatter": "biomejs.biome",
     "[rust]": {
         "editor.defaultFormatter": "rust-lang.rust-analyzer"
