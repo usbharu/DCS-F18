@@ -1,0 +1,18 @@
+{
+    "rust-analyzer.linkedProjects": [
+        "Software/utils/Cargo.toml",
+        "Software/core/Cargo.toml",
+        "Software/firmware/Cargo.toml"
+    ],
+    
+    "cSpell.words": [
+        "heapless"
+    ],
+    "editor.defaultFormatter": "biomejs.biome",
+    "[rust]": {
+        "editor.defaultFormatter": "rust-lang.rust-analyzer"
+    },
+    "[toml]": {
+        "editor.defaultFormatter": "tamasfe.even-better-toml"
+    }
+}

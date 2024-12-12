@@ -1,6 +1,14 @@
 DDI/DDI-backups
 .idea
-.vscode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Local History for Visual Studio Code
+.history/
 # デフォルトの無視対象ファイル
 /shelf/
 /workspace.xml
