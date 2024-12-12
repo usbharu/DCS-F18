@@ -112,11 +112,3 @@ debug-assertions = false
 incremental = false
 lto = 'fat'
 opt-level = 3
-
-
-[[bin]]
-name = "dcs-f18-ddi"
-path = "src/main.rs"
-test = false
-doctest = false
-bench = false
