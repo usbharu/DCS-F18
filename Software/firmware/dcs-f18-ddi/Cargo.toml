@@ -8,6 +8,7 @@ license = "MIT OR Apache-2.0"
 cortex-m.workspace = true
 cortex-m-rt.workspace = true
 mcp230xx = "0.1"
+mcp23017 = "1.1.0"
 shared-bus = "=0.3.1"
 embedded-hal-async.workspace = true
 

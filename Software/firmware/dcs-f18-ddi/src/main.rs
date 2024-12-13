@@ -9,7 +9,7 @@
 extern crate embassy_rp;
 
 use embassy_executor::Spawner;
-use embassy_rp::bind_interrupts;
+use embassy_rp::{bind_interrupts, interrupt};
 use embassy_rp::i2c::InterruptHandler;
 use embassy_rp::peripherals::*;
 

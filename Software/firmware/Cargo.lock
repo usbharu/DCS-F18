@@ -317,6 +317,7 @@ dependencies = [
  "embedded-hal 0.2.7",
  "embedded-hal-async",
  "log",
+ "mcp23017",
  "mcp230xx",
  "panic-probe",
  "portable-atomic",
@@ -1112,6 +1113,15 @@ name = "managed"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ca88d725a0a943b096803bd34e73a4437208b6077654cc4ecb2947a5f91618d"
+
+[[package]]
+name = "mcp23017"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d5a8a91843e1c4641ef9718b87b4296c9280bae160f18caa0cf721498cbc443f"
+dependencies = [
+ "embedded-hal 0.2.7",
+]
 
 [[package]]
 name = "mcp230xx"
