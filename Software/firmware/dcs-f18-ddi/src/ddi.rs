@@ -33,13 +33,10 @@ pub enum DDIPushButton {
     DDI_PB_19,
 }
 
-pub enum DDICtl {
-    DDI_BRT_CTL,
-    DDI_CONT_CTL,
-}
-
-pub enum DDISelect {
-    DDI_BRT_SELECT,
+pub enum DDIBrtSelectState {
+    OFF,
+    DAY,
+    NIGHT,
 }
 
 pub enum IoExCh {
@@ -109,8 +106,7 @@ impl<'a, I2C2: WriteRead<Error = E> + Write<Error = E>, E>
         Ok((read & (1 << pin)) != 0)
     }
 
-    pub fn read_all_push_button(&mut self,channel:IoExCh) -> Result<u8,Error<E>>{ 
-
+    pub fn read_all_push_button(&mut self, channel: IoExCh) -> Result<u8, Error<E>> {
         let (ioex, port) = match channel {
             IoExCh::IO_EX_0_A => (&mut self.ioex_0, mcp23017::Port::GPIOA),
             IoExCh::IO_EX_0_B => (&mut self.ioex_0, mcp23017::Port::GPIOB),
@@ -121,7 +117,31 @@ impl<'a, I2C2: WriteRead<Error = E> + Write<Error = E>, E>
         if let IoExCh::IO_EX_1_A = channel {
             return Ok((ioex.read_gpio(port).map_err(|e| Error::I2cError(e))?) & 0b11110000);
         }
-        
+
         ioex.read_gpio(port).map_err(|e| Error::I2cError(e))
+    }
+
+    pub fn read_brt_ctl(&mut self) -> Result<u16, Error<E>> {
+        todo!()
+    }
+
+    pub fn read_cont_ctl(&mut self) -> Result<u16, Error<E>> {
+        todo!()
+    }
+
+    pub fn read_brt_select(&mut self) -> Result<DDIBrtSelectState, Error<E>> {
+        let read = self
+            .ioex_1
+            .read_gpio(mcp23017::Port::GPIOB)
+            .map_err(|e| Error::I2cError(e))?;
+
+        let read = read & 0b00001111;
+
+        Ok(match read {
+            0b00001000 => DDIBrtSelectState::OFF,
+            0b00000100 => DDIBrtSelectState::NIGHT,
+            0b00000010 => DDIBrtSelectState::DAY,
+            _ => DDIBrtSelectState::DAY,
+        })
     }
 }
